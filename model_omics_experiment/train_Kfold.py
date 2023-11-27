@@ -166,6 +166,7 @@ def main(
             batch_size=params["batch_size"],
             sampler=train_subsampler,
             num_workers=params.get("num_workers", 4),
+            drop_last=True,
             # shuffle=True
         )
 
@@ -174,6 +175,7 @@ def main(
             batch_size=params["batch_size"],
             sampler=val_subsampler,
             num_workers=params.get("num_workers", 4),
+            drop_last=True,
             # shuffle=False
         )
 

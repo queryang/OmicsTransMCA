@@ -519,32 +519,6 @@ class Conv_TransMCA_GEP_CNV_MUT(nn.Module):
                     ) if self.min_max_scaling else predictions
             })  # yapf: disable
 
-            if confidence:
-                augmenter = AugmentTensor(self.smiles_language)
-                epi_conf, epi_pred = monte_carlo_dropout(
-                    self,
-                    regime='tensors',
-                    tensors=(smiles, omics),
-                    repetitions=5
-                )
-                ale_conf, ale_pred = test_time_augmentation(
-                    self,
-                    regime='tensors',
-                    tensors=(smiles, omics),
-                    repetitions=5,
-                    augmenter=augmenter,
-                    tensors_to_augment=0
-                )
-
-                prediction_dict.update({
-                    'epistemic_confidence': epi_conf,
-                    'epistemic_predictions': epi_pred,
-                    'aleatoric_confidence': ale_conf,
-                    'aleatoric_predictions': ale_pred
-                })  # yapf: disable
-
-        elif confidence:
-            logger.info('Using confidence in training mode is not supported.')
 
         return predictions, prediction_dict
 
