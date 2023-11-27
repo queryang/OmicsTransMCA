@@ -8,7 +8,7 @@ from time import time
 import numpy as np
 import torch
 
-from model_omics_experiment.tools.OmicsDrugSensitivityDataset_GEP_CNV_MUT import OmicsDrugSensitivityDataset
+from model_omics_experiment.tools.OmicsDrugSensitivityDataset_GEP_CNV_MUT import OmicsDrugSensitivityDataset_GEP_CNV_MUT
 from model.OmicsTransMCA_predictor.models import MODEL_FACTORY
 from model.OmicsTransMCA_predictor.utils.hyperparams import OPTIMIZER_FACTORY
 from model.OmicsTransMCA_predictor.utils.loss_functions import pearsonr, r2_score
@@ -83,7 +83,7 @@ def main(
         pathway_list = pickle.load(f)
 
     # OmicsDrugSensitivityDataset 重写的数据集class
-    train_dataset = OmicsDrugSensitivityDataset(
+    train_dataset = OmicsDrugSensitivityDataset_GEP_CNV_MUT(
         drug_sensitivity_filepath=train_sensitivity_filepath,
         smiles_filepath=smi_filepath,
         gep_filepath=gep_filepath,
@@ -97,7 +97,7 @@ def main(
         iterate_dataset=False,
     )
 
-    test_dataset = OmicsDrugSensitivityDataset(
+    test_dataset = OmicsDrugSensitivityDataset_GEP_CNV_MUT(
         drug_sensitivity_filepath=test_sensitivity_filepath,
         smiles_filepath=smi_filepath,
         gep_filepath=gep_filepath,

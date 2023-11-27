@@ -8,7 +8,7 @@ import torch
 import pandas as pd
 
 
-class OmicsDrugSensitivityDataset(Dataset):
+class OmicsDrugSensitivityDataset_GEP_CNV(Dataset):
     def __init__(self,
                  drug_sensitivity_filepath: str,
                  smiles_filepath: str,
