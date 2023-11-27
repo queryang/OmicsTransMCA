@@ -155,7 +155,7 @@ def main(
 
     kf = KFold(n_splits=params['fold'], shuffle=True, random_state=42)
     for fold, (train_idx, val_idx) in enumerate(kf.split(train_dataset)):
-        print(f"===== Fold [{fold+1}/{params['fold']}] =====")
+        print(f"======== Fold [{fold+1}/{params['fold']}] ========")
         # 分割训练集和验证集
         train_subsampler = torch.utils.data.SubsetRandomSampler(train_idx)
         val_subsampler = torch.utils.data.SubsetRandomSampler(val_idx)
@@ -181,7 +181,7 @@ def main(
         for epoch in range(params["epochs"]):
 
             print(params_filepath.split("/")[-1])
-            print(f"== Fold [{fold+1} Epoch [{epoch}/{params['epochs']}] ==")
+            print(f"== Fold [{fold+1}/{params['fold']}] Epoch [{epoch}/{params['epochs']}] ==")
 
             training(model, device, epoch, fold, trainloader, optimizer, params, t)
 
@@ -189,6 +189,8 @@ def main(
 
             test_pearson_a, test_rmse_a, test_loss_a, test_r2_a, predictions, labels = (
                 evaluation(model, device, valloader, params, epoch, fold, max_value, min_value))
+
+            # TODO: TEST数据集上性能观察
 
             def save(path, metric, typ, val=None):
                 fold_info = "Fold_" + (fold+1)
@@ -295,7 +297,7 @@ def evaluation(model, device, test_loader, params, epoch, fold, max_value, min_v
     test_loss_a = test_loss / len(test_loader)
     test_r2_a = r2_score(torch.Tensor(predictions), torch.Tensor(labels))
     print(
-        f"\t **** TESTING **** Fold [{fold+1}]   Epoch [{epoch + 1}/{params['epochs']}], "
+        f"\t **** Evaluation **** Fold [{fold+1}]   Epoch [{epoch + 1}/{params['epochs']}], "
         f"loss: {test_loss_a:.5f}, "
         f"Pearson: {test_pearson_a:.3f}, "
         f"RMSE: {test_rmse_a:.3f}, "

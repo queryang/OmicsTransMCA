@@ -130,9 +130,9 @@ class OmicsDrugSensitivityDataset_GEP_MUT(Dataset):
         )
         # omics data
         gene_expression_tensor = torch.tensor((
-            self.gep.loc)[selected_sample[self.cell_name]],
+            self.gep.loc[selected_sample[self.cell_name]].values),
             dtype=self.gep_dtype)
         mut_tensor = torch.tensor((
-            self.mut.loc)[selected_sample[self.cell_name]],
+            self.mut.loc[selected_sample[self.cell_name]].values),
             dtype=self.mut_dtype)
         return (token_indexes_tensor, gene_expression_tensor, mut_tensor, ic50_tensor)
