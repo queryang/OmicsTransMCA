@@ -8,7 +8,7 @@ from time import time
 import numpy as np
 import torch
 
-from PlanH.tools.OmicsDrugSensitivityDataset_GEP_CNV_MUT import OmicsDrugSensitivityDataset
+from model_omics_experiment.tools.OmicsDrugSensitivityDataset_GEP_CNV_MUT import OmicsDrugSensitivityDataset
 from model.OmicsTransMCA_predictor.models import MODEL_FACTORY
 from model.OmicsTransMCA_predictor.utils.hyperparams import OPTIMIZER_FACTORY
 from model.OmicsTransMCA_predictor.utils.loss_functions import pearsonr, r2_score
@@ -82,7 +82,7 @@ def main(
     with open(gene_filepath, "rb") as f:
         pathway_list = pickle.load(f)
 
-    #TODO:Load the datasets
+    # OmicsDrugSensitivityDataset 重写的数据集class
     train_dataset = OmicsDrugSensitivityDataset(
         drug_sensitivity_filepath=train_sensitivity_filepath,
         smiles_filepath=smi_filepath,
@@ -96,12 +96,7 @@ def main(
         drug_sensitivity_min_max=params.get("drug_sensitivity_min_max", True),
         iterate_dataset=False,
     )
-    # train_loader = torch.utils.data.DataLoader(
-    #     dataset=train_dataset,
-    #     batch_size=params["batch_size"],
-    #     shuffle=True,
-    #     num_workers=params.get("num_workers", 4),
-    # )
+
     test_dataset = OmicsDrugSensitivityDataset(
         drug_sensitivity_filepath=test_sensitivity_filepath,
         smiles_filepath=smi_filepath,
@@ -117,12 +112,7 @@ def main(
     )
     min_value = test_dataset.drug_sensitivity_processing_parameters['parameters']['min']
     max_value = test_dataset.drug_sensitivity_processing_parameters['parameters']['max']
-    # test_loader = torch.utils.data.DataLoader(
-    #     dataset=test_dataset,
-    #     batch_size=params["batch_size"],
-    #     shuffle=False,
-    #     num_workers=params.get("num_workers", 4),
-    # )
+
     print(
         f"Training dataset has {len(train_dataset)} samples, test set has "
         f"{len(test_dataset)}."
@@ -142,7 +132,7 @@ def main(
     model = MODEL_FACTORY[model_name](params).to(device)
     model._associate_language(smiles_language)
 
-    # TODO: 不加载模型了
+    # 不加载模型了
     min_loss, min_rmse, max_pearson, max_r2 = 100, 1000, 0, 0
 
     # Define optimizer
@@ -163,19 +153,20 @@ def main(
     t = time()
 
 
-    kf = KFold(n_splits=5, shuffle=True, random_state=42)
+    kf = KFold(n_splits=params['fold'], shuffle=True, random_state=42)
     for fold, (train_idx, val_idx) in enumerate(kf.split(train_dataset)):
-
+        print(f"===== Fold [{fold+1}/{params['fold']}] =====")
         # 分割训练集和验证集
         train_subsampler = torch.utils.data.SubsetRandomSampler(train_idx)
         val_subsampler = torch.utils.data.SubsetRandomSampler(val_idx)
 
+        # warning: SubsetRandomSampler 和 shuffle=True 互斥
         trainloader = torch.utils.data.DataLoader(
             train_dataset,
             batch_size=params["batch_size"],
             sampler=train_subsampler,
             num_workers=params.get("num_workers", 4),
-            shuffle=True
+            # shuffle=True
         )
 
         valloader = torch.utils.data.DataLoader(
@@ -183,80 +174,27 @@ def main(
             batch_size=params["batch_size"],
             sampler=val_subsampler,
             num_workers=params.get("num_workers", 4),
-            shuffle=False
+            # shuffle=False
         )
 
+        # start training
         for epoch in range(params["epochs"]):
+
             print(params_filepath.split("/")[-1])
-            print(f"==Fold[{fold}] Epoch [{epoch}/{params['epochs']}] ==")
-            # todo： 设计成一个函数
-            model.train()
-            train_loss = 0
+            print(f"== Fold [{fold+1} Epoch [{epoch}/{params['epochs']}] ==")
 
-            for ind, (smiles, gep, cnv, mut, y) in enumerate(trainloader):
-                y_hat, pred_dict = model(
-                    torch.squeeze(smiles.to(device)), gep.to(device), cnv.to(device), mut.to(device))
-                loss = model.loss(y_hat, y.to(device))
-                optimizer.zero_grad()
-                loss.backward()
-                # Apply gradient clipping
-                # torch.nn.utils.clip_grad_norm_(model.parameters(), 1e-6)
-                optimizer.step()
-                train_loss += loss.item()
+            training(model, device, epoch, fold, trainloader, optimizer, params, t)
 
-            print(
-                "\t **** TRAINING ****   "
-                f"Epoch [{epoch + 1}/{params['epochs']}], "
-                f"loss: {train_loss / len(trainloader):.5f}. "
-                f"This took {time() - t:.1f} secs."
-            )
             t = time()
 
-            # Measure validation performance
-            model.eval()
-            with torch.no_grad():
-                test_loss = 0
-                # predictions = []
-                # labels = []
-                log_pres = []
-                log_labels = []
-                for ind, (smiles, gep, cnv, mut, y) in enumerate(valloader):
-                    y_hat, pred_dict = model(
-                        torch.squeeze(smiles.to(device)), gep.to(device), cnv.to(device), mut.to(device)
-                    )
-                    log_pre = pred_dict.get("log_micromolar_IC50")
-                    log_pres.append(log_pre)
-                    # predictions.append(y_hat)
-                    log_y = get_log_molar(y, ic50_max=max_value, ic50_min=min_value)
-                    log_labels.append(log_y)
-                    # labels.append(y)
-                    loss = model.loss(log_pre, log_y.to(device))
-                    test_loss += loss.item()
-
-            # on the logIC50 scale
-            predictions = torch.cat([p.cpu() for preds in log_pres for p in preds])
-            labels = torch.cat([l.cpu() for label in log_labels for l in label])
-            # 计算pearson相关系数
-            test_pearson_a = pearsonr(torch.Tensor(predictions), torch.Tensor(labels))
-            test_rmse_a = torch.sqrt(torch.mean((predictions - labels) ** 2))
-            test_loss_a = test_loss / len(valloader)
-            test_r2_a = r2_score(torch.Tensor(predictions), torch.Tensor(labels))
-            print(
-                f"\t **** TESTING ****   Epoch [{epoch + 1}/{params['epochs']}], "
-                f"loss: {test_loss_a:.5f}, "
-                f"Pearson: {test_pearson_a:.3f}, "
-                f"RMSE: {test_rmse_a:.3f}, "
-                f"R2: {test_r2_a:.3f}. "
-            )
+            test_pearson_a, test_rmse_a, test_loss_a, test_r2_a, predictions, labels = (
+                evaluation(model, device, valloader, params, epoch, fold, max_value, min_value))
 
             def save(path, metric, typ, val=None):
                 model.save(path.format(typ, metric, model_name))
-                with open(os.path.join(model_dir, "results", metric + ".json"), "w") as f:
+                fold_info = "Fold_" + (fold+1)
+                with open(os.path.join(model_dir, "results", fold_info + metric + ".json"), "w") as f:
                     json.dump(info, f)
-                np.save(
-                    os.path.join(model_dir, "results", metric + "_preds.npy"),
-                    np.vstack([predictions, labels]),
-                )
                 if typ == "best":
                     print(
                         f'\t New best performance in "{metric}"'
@@ -302,190 +240,67 @@ def main(
         )
         save(save_top_model, "training", "done")
 
-
-
-
-
-
-
-
-
-
-
-
-
-#======================原代码=======================================
-    print(
-        f"Training dataset has {len(train_dataset)} samples, test set has "
-        f"{len(test_dataset)}."
-    )
-
-    device = get_device()
-
-    save_top_model = os.path.join(model_dir, "weights/{}_{}_{}.pt")
-    params.update(
-        {  # yapf: disable
-            "number_of_genes": len(pathway_list),
-            "smiles_vocabulary_size": smiles_language.number_of_tokens,
-            "drug_sensitivity_processing_parameters": train_dataset.drug_sensitivity_processing_parameters,
-            "gene_expression_processing_parameters": {},
-        }
-    )
-    model_name = params.get("model_fn", "conv_trans_mca_GEP_CNV_MUT")
-    model = MODEL_FACTORY[model_name](params).to(device)
-    model._associate_language(smiles_language)
-
-
-    if os.path.isfile(os.path.join(model_dir, "weights", f"best_mse_{model_name}.pt")):
-        print("Found existing model, restoring now...")
-        model.load(os.path.join(model_dir, "weights", f"best_mse_{model_name}.pt"))
-
-        with open(os.path.join(model_dir, "results", "mse.json"), "r") as f:
-            info = json.load(f)
-
-            min_rmse = float(info["best_rmse"].strip("tensor()"))
-            max_pearson = float(info["best_pearson"].strip("tensor()"))
-            min_loss = float(info["test_loss"].strip("tensor()"))
-            max_r2 = float(info["best_r2"].strip("tensor()"))
-
-    else:
-        min_loss, min_rmse, max_pearson, max_r2 = 100, 1000, 0, 0
-
-    # Define optimizer
-    optimizer = OPTIMIZER_FACTORY[params.get("optimizer", "Adam")](
-        model.parameters(), lr=params.get("lr", 0.001)
-    )
-
-    num_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
-    params.update({"number_of_parameters": num_params})
-    print(f"Number of parameters {num_params}")
-
-    # Overwrite params.json file with updated parameters.
-    with open(os.path.join(model_dir, "model_params.json"), "w") as fp:
-        json.dump(params, fp)
-
-    # Start training
-    print("Training about to start...\n")
-    t = time()
-
-    model.save(save_top_model.format("epoch", "0", model_name))
-
-    for epoch in range(params["epochs"]):
-
-        model.train()
-        print(params_filepath.split("/")[-1])
-        print(f"== Epoch [{epoch}/{params['epochs']}] ==")
-        train_loss = 0
-
-        for ind, (smiles, gep, cnv, mut, y) in enumerate(train_loader):
-            y_hat, pred_dict = model(
-                torch.squeeze(smiles.to(device)), gep.to(device), cnv.to(device), mut.to(device))
-            loss = model.loss(y_hat, y.to(device))
-            optimizer.zero_grad()
-            loss.backward()
-            # Apply gradient clipping
-            # torch.nn.utils.clip_grad_norm_(model.parameters(), 1e-6)
-            optimizer.step()
-            train_loss += loss.item()
-
-        print(
-            "\t **** TRAINING ****   "
-            f"Epoch [{epoch + 1}/{params['epochs']}], "
-            f"loss: {train_loss / len(train_loader):.5f}. "
-            f"This took {time() - t:.1f} secs."
-        )
-        t = time()
-
-        # Measure validation performance
-        model.eval()
-        with torch.no_grad():
-            test_loss = 0
-            # predictions = []
-            # labels = []
-            log_pres = []
-            log_labels = []
-            for ind, (smiles, gep, cnv, mut, y) in enumerate(test_loader):
-                y_hat, pred_dict = model(
-                    torch.squeeze(smiles.to(device)), gep.to(device), cnv.to(device), mut.to(device)
-                )
-                log_pre = pred_dict.get("log_micromolar_IC50")
-                log_pres.append(log_pre)
-                # predictions.append(y_hat)
-                log_y = get_log_molar(y, ic50_max=max_value, ic50_min=min_value)
-                log_labels.append(log_y)
-                # labels.append(y)
-                loss = model.loss(log_pre, log_y.to(device))
-                test_loss += loss.item()
-
-        # on the logIC50 scale
-        predictions = torch.cat([p.cpu() for preds in log_pres for p in preds])
-        labels = torch.cat([l.cpu() for label in log_labels for l in label])
-        # 计算pearson相关系数
-        test_pearson_a = pearsonr(torch.Tensor(predictions), torch.Tensor(labels))
-        test_rmse_a = torch.sqrt(torch.mean((predictions - labels) ** 2))
-        test_loss_a = test_loss / len(test_loader)
-        test_r2_a = r2_score(torch.Tensor(predictions), torch.Tensor(labels))
-        print(
-            f"\t **** TESTING ****   Epoch [{epoch + 1}/{params['epochs']}], "
-            f"loss: {test_loss_a:.5f}, "
-            f"Pearson: {test_pearson_a:.3f}, "
-            f"RMSE: {test_rmse_a:.3f}, "
-            f"R2: {test_r2_a:.3f}. "
-        )
-
-        def save(path, metric, typ, val=None):
-            model.save(path.format(typ, metric, model_name))
-            with open(os.path.join(model_dir, "results", metric + ".json"), "w") as f:
-                json.dump(info, f)
-            np.save(
-                os.path.join(model_dir, "results", metric + "_preds.npy"),
-                np.vstack([predictions, labels]),
-            )
-            if typ == "best":
-                print(
-                    f'\t New best performance in "{metric}"'
-                    f" with value : {val:.7f} in epoch: {epoch}"
-                )
-
-        def update_info():
-            return {
-                "best_rmse": str(min_rmse),
-                "best_pearson": str(float(max_pearson)),
-                "test_loss": str(min_loss),
-                "best_r2": str(float(max_r2)),
-                "predictions": [float(p) for p in predictions],
-            }
-
-        if test_loss_a < min_loss:
-            min_rmse = test_rmse_a
-            min_loss = test_loss_a
-            min_loss_pearson = test_pearson_a
-            info = update_info()
-            save(save_top_model, "mse", "best", min_loss)
-            ep_loss = epoch
-        if test_pearson_a > max_pearson:
-            max_pearson = test_pearson_a
-            max_pearson_loss = test_loss_a
-            info = update_info()
-            save(save_top_model, "pearson", "best", max_pearson)
-            ep_pearson = epoch
-        if test_r2_a > max_r2:
-            max_r2 = test_r2_a
-            info = update_info()
-            save(save_top_model, "r2", "best", max_r2)
-            ep_r2 = epoch
-        if (epoch + 1) % params.get("save_model", 100) == 0:
-            save(save_top_model, "epoch", str(epoch))
-    print(
-        "Overall best performances are: \n \t"
-        f"Loss = {min_loss:.4f} in epoch {ep_loss} "
-        f"\t (Pearson was {min_loss_pearson:4f}) \n \t"
-        f"Pearson = {max_pearson:.4f} in epoch {ep_pearson} "
-        f"\t (Loss was {max_pearson_loss:2f})"
-        f"\t R2 = {max_r2:.4f} in epoch {ep_r2} "
-    )
-    save(save_top_model, "training", "done")
     print("Done with training, models saved, shutting down.")
+
+
+
+def training(model, device, epoch, fold, train_loader, optimizer, params, t):
+
+    model.train()
+    train_loss = 0
+    for ind, (smiles, gep, cnv, mut, y) in enumerate(train_loader):
+        y_hat, pred_dict = model(
+            torch.squeeze(smiles.to(device)), gep.to(device), cnv.to(device), mut.to(device))
+        loss = model.loss(y_hat, y.to(device))
+        optimizer.zero_grad()
+        loss.backward()
+        # Apply gradient clipping
+        # torch.nn.utils.clip_grad_norm_(model.parameters(), 1e-6)
+        optimizer.step()
+        train_loss += loss.item()
+    print(
+        "\t **** TRAINING ****   "
+        f"Fold [{fold+1}] Epoch [{epoch + 1}/{params['epochs']}], "
+        f"loss: {train_loss / len(train_loader):.5f}. "
+        f"This took {time() - t:.1f} secs."
+    )
+
+def evaluation(model, device, test_loader, params, epoch, fold, max_value, min_value):
+    # Measure validation performance
+    model.eval()
+    with torch.no_grad():
+        test_loss = 0
+        log_pres = []
+        log_labels = []
+        for ind, (smiles, gep, cnv, mut, y) in enumerate(test_loader):
+            y_hat, pred_dict = model(
+                torch.squeeze(smiles.to(device)), gep.to(device), cnv.to(device), mut.to(device)
+            )
+            log_pre = pred_dict.get("log_micromolar_IC50")
+            log_pres.append(log_pre)
+            # predictions.append(y_hat)
+            log_y = get_log_molar(y, ic50_max=max_value, ic50_min=min_value)
+            log_labels.append(log_y)
+            # labels.append(y)
+            loss = model.loss(log_pre, log_y.to(device))
+            test_loss += loss.item()
+
+    # on the logIC50 scale
+    predictions = torch.cat([p.cpu() for preds in log_pres for p in preds])
+    labels = torch.cat([l.cpu() for label in log_labels for l in label])
+    # 计算pearson相关系数
+    test_pearson_a = pearsonr(torch.Tensor(predictions), torch.Tensor(labels))
+    test_rmse_a = torch.sqrt(torch.mean((predictions - labels) ** 2))
+    test_loss_a = test_loss / len(test_loader)
+    test_r2_a = r2_score(torch.Tensor(predictions), torch.Tensor(labels))
+    print(
+        f"\t **** TESTING **** Fold [{fold+1}]   Epoch [{epoch + 1}/{params['epochs']}], "
+        f"loss: {test_loss_a:.5f}, "
+        f"Pearson: {test_pearson_a:.3f}, "
+        f"RMSE: {test_rmse_a:.3f}, "
+        f"R2: {test_r2_a:.3f}. "
+    )
+    return test_loss_a, test_pearson_a, test_rmse_a, test_r2_a, predictions, labels
 
 
 if __name__ == "__main__":
@@ -499,7 +314,7 @@ if __name__ == "__main__":
     gene_filepath = 'data/MUDICUS_Omic_619_pathways.pkl'
     smiles_language_filepath = 'data/smiles_language/tokenizer_customized'
     model_path = 'result'
-    params_filepath = 'data/params/TransMCA_GEP_CNV_MUT.json'
+    params_filepath = 'data/params/KFold_Test.json'
     training_name = 'my_training_test'
     # run the training
     main(
