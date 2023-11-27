@@ -191,8 +191,8 @@ def main(
                 evaluation(model, device, valloader, params, epoch, fold, max_value, min_value))
 
             def save(path, metric, typ, val=None):
-                model.save(path.format(typ, metric, model_name))
                 fold_info = "Fold_" + (fold+1)
+                model.save(path.format(fold_info + typ, metric, model_name))
                 with open(os.path.join(model_dir, "results", fold_info + metric + ".json"), "w") as f:
                     json.dump(info, f)
                 if typ == "best":
@@ -228,10 +228,11 @@ def main(
                 info = update_info()
                 save(save_top_model, "r2", "best", max_r2)
                 ep_r2 = epoch
-            if (epoch + 1) % params.get("save_model", 100) == 0:
-                save(save_top_model, "epoch", str(epoch))
+            # 不按照轮次保存模型
+            # if (epoch + 1) % params.get("save_model", 100) == 0:
+            #     save(save_top_model, "epoch", str(epoch))
         print(
-            "Overall best performances are: \n \t"
+            f"Overall Fold {fold+1} best performances are: \n \t"
             f"Loss = {min_loss:.4f} in epoch {ep_loss} "
             f"\t (Pearson was {min_loss_pearson:4f}) \n \t"
             f"Pearson = {max_pearson:.4f} in epoch {ep_pearson} "
