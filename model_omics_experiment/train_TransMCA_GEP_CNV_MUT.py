@@ -119,7 +119,7 @@ def main(
     test_loader = torch.utils.data.DataLoader(
         dataset=test_dataset,
         batch_size=params["batch_size"],
-        shuffle=True,
+        shuffle=False,
         drop_last=True,
         num_workers=params.get("num_workers", 4),
     )
@@ -212,9 +212,9 @@ def main(
             # labels = []
             log_pres = []
             log_labels = []
-            for ind, (smiles, omics, y) in enumerate(test_loader):
+            for ind, (smiles, gep, cnv, mut, y) in enumerate(test_loader):
                 y_hat, pred_dict = model(
-                    torch.squeeze(smiles.to(device)), omics.to(device)
+                    torch.squeeze(smiles.to(device)), gep.to(device), cnv.to(device), mut.to(device)
                 )
                 log_pre = pred_dict.get("log_micromolar_IC50")
                 log_pres.append(log_pre)
