@@ -79,7 +79,7 @@
     "gene_attention_size": 1,
     "embed_scale_grad": false,
     "final_activation": true,
-    "batch_size": 128,
+    "batch_size": 32,
     "lr": 0.001,
     "optimizer": "adam",
     "loss_fn": "mse",

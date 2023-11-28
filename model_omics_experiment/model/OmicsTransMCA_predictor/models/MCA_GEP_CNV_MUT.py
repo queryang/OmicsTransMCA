@@ -158,7 +158,6 @@ class Conv_NonTransMCA_GEP_CNV_MUT(nn.Module):
             scale_grad_by_freq=params.get('embed_scale_grad', False)
         )
 
-
         self.convolutional_layers = nn.Sequential(
             OrderedDict(
                 [

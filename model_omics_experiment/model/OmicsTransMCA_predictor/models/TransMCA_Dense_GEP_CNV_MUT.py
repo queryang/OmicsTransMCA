@@ -372,7 +372,7 @@ class Conv_TransMCA_GEP_CNV_MUT(nn.Module):
             )
         )
 
-    def forward(self, smiles, gep, cnv, mut, confidence=False):
+    def forward(self, smiles, gep, cnv, mut):
         """Forward pass through the PaccMannV2.
 
         Args:
@@ -380,8 +380,6 @@ class Conv_TransMCA_GEP_CNV_MUT(nn.Module):
             gep (torch.Tensor): of type float and shape: [bs, number_of_genes]
             cnv (torch.Tensor): of type float and shape: [bs, number_of_genes]
             mut (torch.Tensor): of type float and shape: [bs, number_of_genes]
-            confidence (bool, optional) whether the confidence estimates are
-                performed.
 
         Returns:
             (torch.Tensor, dict): predictions, prediction_dict

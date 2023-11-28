@@ -11,13 +11,15 @@ from model.OmicsTransMCA_predictor.models import MODEL_FACTORY
 from model.OmicsTransMCA_predictor.utils.hyperparams import OPTIMIZER_FACTORY
 from model.OmicsTransMCA_predictor.utils.loss_functions import pearsonr, r2_score
 from model.OmicsTransMCA_predictor.utils.utils import get_device, get_log_molar
-from pytoda.datasets import DrugSensitivityDataset
 from pytoda.smiles.smiles_language import SMILESTokenizer
+from model_omics_experiment.tools.OmicsDrugSensitivityDataset_GEP_CNV_MUT import OmicsDrugSensitivityDataset_GEP_CNV_MUT
 
 def main(
     train_sensitivity_filepath,
     test_sensitivity_filepath,
     gep_filepath,
+    cnv_filepath,
+    mut_filepath,
     smi_filepath,
     gene_filepath,
     smiles_language_filepath,
@@ -78,22 +80,18 @@ def main(
         pathway_list = pickle.load(f)
 
     # Load the datasets
-    train_dataset = DrugSensitivityDataset(
+    # OmicsDrugSensitivityDataset 重写的数据集class
+    train_dataset = OmicsDrugSensitivityDataset_GEP_CNV_MUT(
         drug_sensitivity_filepath=train_sensitivity_filepath,
-        smi_filepath=smi_filepath,
-        gene_expression_filepath=gep_filepath,
+        smiles_filepath=smi_filepath,
+        gep_filepath=gep_filepath,
+        cnv_filepath=cnv_filepath,
+        mut_filepath=mut_filepath,
+        gep_standardize=params.get("gep_standardize", False),
+        cnv_standardize=params.get("cnv_standardize", False),
+        mut_standardize=params.get("mut_standardize", False),
         smiles_language=smiles_language,
-        gene_list=pathway_list,
         drug_sensitivity_min_max=params.get("drug_sensitivity_min_max", True),
-        drug_sensitivity_processing_parameters=params.get(
-            "drug_sensitivity_processing_parameters", {}
-        ),
-        gene_expression_standardize=params.get("gene_expression_standardize", True),
-        gene_expression_min_max=params.get("gene_expression_min_max", False),
-        gene_expression_processing_parameters=params.get(
-            "gene_expression_processing_parameters", {}
-        ),
-        # device=torch.device(params.get("dataset_device", "cpu")),
         iterate_dataset=False,
     )
     train_loader = torch.utils.data.DataLoader(
@@ -103,24 +101,17 @@ def main(
         drop_last=True,
         num_workers=params.get("num_workers", 4),
     )
-    test_dataset = DrugSensitivityDataset(
+    test_dataset = OmicsDrugSensitivityDataset_GEP_CNV_MUT(
         drug_sensitivity_filepath=test_sensitivity_filepath,
-        smi_filepath=smi_filepath,
-        gene_expression_filepath=gep_filepath,
+        smiles_filepath=smi_filepath,
+        gep_filepath=gep_filepath,
+        cnv_filepath=cnv_filepath,
+        mut_filepath=mut_filepath,
+        gep_standardize=params.get("gep_standardize", False),
+        cnv_standardize=params.get("cnv_standardize", False),
+        mut_standardize=params.get("mut_standardize", False),
         smiles_language=smiles_language,
-        gene_list=pathway_list,
         drug_sensitivity_min_max=params.get("drug_sensitivity_min_max", True),
-        drug_sensitivity_processing_parameters=params.get(
-            "drug_sensitivity_processing_parameters",
-            train_dataset.drug_sensitivity_processing_parameters,
-        ),
-        gene_expression_standardize=params.get("gene_expression_standardize", True),
-        gene_expression_min_max=params.get("gene_expression_min_max", False),
-        gene_expression_processing_parameters=params.get(
-            "gene_expression_processing_parameters",
-            train_dataset.gene_expression_dataset.processing,
-        ),
-        # device=torch.device(params.get("dataset_device", "cpu")),
         iterate_dataset=False,
     )
     min_value = test_dataset.drug_sensitivity_processing_parameters['parameters']['min']
@@ -194,8 +185,9 @@ def main(
         print(f"== Epoch [{epoch}/{params['epochs']}] ==")
         train_loss = 0
 
-        for ind, (smiles, omics, y) in enumerate(train_loader):
-            y_hat, pred_dict = model(torch.squeeze(smiles.to(device)), omics.to(device))
+        for ind, (smiles, gep, cnv, mut, y) in enumerate(train_loader):
+            y_hat, pred_dict = model(
+                torch.squeeze(smiles.to(device)), gep.to(device), cnv.to(device), mut.to(device))
             loss = model.loss(y_hat, y.to(device))
             optimizer.zero_grad()
             loss.backward()
@@ -308,7 +300,9 @@ if __name__ == "__main__":
 
     train_sensitivity_filepath = 'data/drug_sensitivity_MixedSet_train.csv'
     test_sensitivity_filepath = 'data/drug_sensitivity_MixedSet_test.csv'
-    omics_filepath = 'data/Omics_GEP_CNV(Cardinality_Analysis)_MUT_MEDICUS.csv'
+    gep_filepath = 'data/OmicsExpressionProteinCodingGenesTPMLogp1-23Q2_Only_MEDICUS_GSVA.csv'
+    cnv_filepath = 'data/CNV_Cardinality_analysis_of_variance_Latest_MEDICUS.csv'
+    mut_filepath = 'data/MUT_cardinality_analysis_of_variance_Only_MEDICUS.csv'
     smi_filepath = 'data/ccle-gdsc.smi'
     gene_filepath = 'data/MEDICUS_Omics_1857_pathways.pkl'
     smiles_language_filepath = 'data/smiles_language/tokenizer_customized'
@@ -319,7 +313,9 @@ if __name__ == "__main__":
     main(
         train_sensitivity_filepath,
         test_sensitivity_filepath,
-        omics_filepath,
+        gep_filepath,
+        cnv_filepath,
+        mut_filepath,
         smi_filepath,
         gene_filepath,
         smiles_language_filepath,
