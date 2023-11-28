@@ -315,12 +315,13 @@ class Conv_TransMCA_GEP_MUT(nn.Module):
             )
         )
 
-    def forward(self, smiles, omics, confidence=False):
+    def forward(self, smiles, gep, mut, confidence=False):
         """Forward pass through the PaccMannV2.
 
         Args:
             smiles (torch.Tensor): of type int and shape: [bs, smiles_padding_length]
-            omics (torch.Tensor): of shape `[bs, number_of_genes]`.
+            gep (torch.Tensor): of type float and shape: [bs, number_of_genes]
+            mut (torch.Tensor): of type float and shape: [bs, number_of_genes]
             confidence (bool, optional) whether the confidence estimates are
                 performed.
 
@@ -329,11 +330,6 @@ class Conv_TransMCA_GEP_MUT(nn.Module):
             predictions is IC50 drug sensitivity prediction of shape `[bs, 1]`.
             prediction_dict includes the prediction and attention weights.
         """
-        # 将omics分为三部分，以number_of_genes为分界线
-        gep = omics[:, :self.number_of_genes]
-        mut = omics[:, 2 * self.number_of_genes:]
-
-
         gep = torch.unsqueeze(gep, dim=-1)
         mut = torch.unsqueeze(mut, dim=-1)
         embedded_smiles = self.smiles_embedding(smiles.to(dtype=torch.int64))

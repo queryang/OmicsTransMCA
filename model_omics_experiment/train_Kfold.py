@@ -316,7 +316,7 @@ if __name__ == "__main__":
     smi_filepath = 'data/ccle-gdsc.smi'
     gene_filepath = 'data/MUDICUS_Omic_619_pathways.pkl'
     smiles_language_filepath = 'data/smiles_language/tokenizer_customized'
-    model_path = 'result'
+    model_path = 'result/model'
     params_filepath = 'data/params/KFold_Test.json'
     training_name = 'my_training_test'
     # run the training

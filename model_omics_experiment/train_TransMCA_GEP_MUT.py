@@ -11,13 +11,16 @@ from model.OmicsTransMCA_predictor.models import MODEL_FACTORY
 from model.OmicsTransMCA_predictor.utils.hyperparams import OPTIMIZER_FACTORY
 from model.OmicsTransMCA_predictor.utils.loss_functions import pearsonr, r2_score
 from model.OmicsTransMCA_predictor.utils.utils import get_device, get_log_molar
-from pytoda.datasets import DrugSensitivityDataset
 from pytoda.smiles.smiles_language import SMILESTokenizer
+
+from model_omics_experiment.tools.OmicsDrugSensitivityDataset_GEP_MUT import OmicsDrugSensitivityDataset_GEP_MUT
+
 
 def main(
     train_sensitivity_filepath,
     test_sensitivity_filepath,
     gep_filepath,
+    mut_filepath,
     smi_filepath,
     gene_filepath,
     smiles_language_filepath,
@@ -62,7 +65,7 @@ def main(
         sanitize=params.get("selfies", False),
     )
     test_smiles_language.set_smiles_transforms(
-        augment=False,
+        augment=params.get("augment_smiles", False),
         canonical=params.get("test_smiles_canonical", False),
         kekulize=params.get("smiles_kekulize", False),
         all_bonds_explicit=params.get("smiles_bonds_explicit", False),
@@ -78,22 +81,16 @@ def main(
         pathway_list = pickle.load(f)
 
     # Load the datasets
-    train_dataset = DrugSensitivityDataset(
+    # OmicsDrugSensitivityDataset 重写的数据集class
+    train_dataset = OmicsDrugSensitivityDataset_GEP_MUT(
         drug_sensitivity_filepath=train_sensitivity_filepath,
-        smi_filepath=smi_filepath,
-        gene_expression_filepath=gep_filepath,
+        smiles_filepath=smi_filepath,
+        gep_filepath=gep_filepath,
+        mut_filepath=mut_filepath,
+        gep_standardize=params.get("gep_standardize", False),
+        mut_standardize=params.get("mut_standardize", False),
         smiles_language=smiles_language,
-        gene_list=pathway_list,
         drug_sensitivity_min_max=params.get("drug_sensitivity_min_max", True),
-        drug_sensitivity_processing_parameters=params.get(
-            "drug_sensitivity_processing_parameters", {}
-        ),
-        gene_expression_standardize=params.get("gene_expression_standardize", True),
-        gene_expression_min_max=params.get("gene_expression_min_max", False),
-        gene_expression_processing_parameters=params.get(
-            "gene_expression_processing_parameters", {}
-        ),
-        # device=torch.device(params.get("dataset_device", "cpu")),
         iterate_dataset=False,
     )
     train_loader = torch.utils.data.DataLoader(
@@ -103,32 +100,25 @@ def main(
         drop_last=True,
         num_workers=params.get("num_workers", 4),
     )
-    test_dataset = DrugSensitivityDataset(
+    test_dataset = OmicsDrugSensitivityDataset_GEP_MUT(
         drug_sensitivity_filepath=test_sensitivity_filepath,
-        smi_filepath=smi_filepath,
-        gene_expression_filepath=gep_filepath,
+        smiles_filepath=smi_filepath,
+        gep_filepath=gep_filepath,
+        mut_filepath=mut_filepath,
+        gep_standardize=params.get("gep_standardize", False),
+        mut_standardize=params.get("mut_standardize", False),
         smiles_language=smiles_language,
-        gene_list=pathway_list,
         drug_sensitivity_min_max=params.get("drug_sensitivity_min_max", True),
-        drug_sensitivity_processing_parameters=params.get(
-            "drug_sensitivity_processing_parameters",
-            train_dataset.drug_sensitivity_processing_parameters,
-        ),
-        gene_expression_standardize=params.get("gene_expression_standardize", True),
-        gene_expression_min_max=params.get("gene_expression_min_max", False),
-        gene_expression_processing_parameters=params.get(
-            "gene_expression_processing_parameters",
-            train_dataset.gene_expression_dataset.processing,
-        ),
-        # device=torch.device(params.get("dataset_device", "cpu")),
         iterate_dataset=False,
     )
+
     min_value = test_dataset.drug_sensitivity_processing_parameters['parameters']['min']
     max_value = test_dataset.drug_sensitivity_processing_parameters['parameters']['max']
+
     test_loader = torch.utils.data.DataLoader(
         dataset=test_dataset,
         batch_size=params["batch_size"],
-        shuffle=True,
+        shuffle=False,
         drop_last=True,
         num_workers=params.get("num_workers", 4),
     )
@@ -194,13 +184,14 @@ def main(
         print(f"== Epoch [{epoch}/{params['epochs']}] ==")
         train_loss = 0
 
-        for ind, (smiles, omics, y) in enumerate(train_loader):
-            y_hat, pred_dict = model(torch.squeeze(smiles.to(device)), omics.to(device))
+        for ind, (smiles, gep, mut, y) in enumerate(train_loader):
+            y_hat, pred_dict = model(
+                torch.squeeze(smiles.to(device)), gep.to(device), mut.to(device))
             loss = model.loss(y_hat, y.to(device))
             optimizer.zero_grad()
             loss.backward()
             # Apply gradient clipping
-            torch.nn.utils.clip_grad_norm_(model.parameters(),1e-6)
+            torch.nn.utils.clip_grad_norm_(model.parameters(), 1e-6)
             optimizer.step()
             train_loss += loss.item()
 
@@ -220,9 +211,9 @@ def main(
             # labels = []
             log_pres = []
             log_labels = []
-            for ind, (smiles, omics, y) in enumerate(test_loader):
+            for ind, (smiles, gep, mut, y) in enumerate(test_loader):
                 y_hat, pred_dict = model(
-                    torch.squeeze(smiles.to(device)), omics.to(device)
+                    torch.squeeze(smiles.to(device)), gep.to(device), mut.to(device)
                 )
                 log_pre = pred_dict.get("log_micromolar_IC50")
                 log_pres.append(log_pre)
@@ -308,7 +299,8 @@ if __name__ == "__main__":
 
     train_sensitivity_filepath = 'data/drug_sensitivity_MixedSet_train.csv'
     test_sensitivity_filepath = 'data/drug_sensitivity_MixedSet_test.csv'
-    omics_filepath = 'data/Omics_GEP_CNV(Cardinality_Analysis)_MUT_MEDICUS.csv'
+    gep_filepath = 'data/OmicsExpressionProteinCodingGenesTPMLogp1-23Q2_Only_MEDICUS_GSVA.csv'
+    mut_filepath = 'data/MUT_cardinality_analysis_of_variance_Only_MEDICUS.csv'
     smi_filepath = 'data/ccle-gdsc.smi'
     gene_filepath = 'data/MEDICUS_Omics_1857_pathways.pkl'
     smiles_language_filepath = 'data/smiles_language/tokenizer_customized'
@@ -319,7 +311,8 @@ if __name__ == "__main__":
     main(
         train_sensitivity_filepath,
         test_sensitivity_filepath,
-        omics_filepath,
+        gep_filepath,
+        mut_filepath,
         smi_filepath,
         gene_filepath,
         smiles_language_filepath,
