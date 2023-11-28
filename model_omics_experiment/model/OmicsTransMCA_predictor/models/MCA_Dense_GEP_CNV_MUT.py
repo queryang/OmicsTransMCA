@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 
 
-class Conv_NonTransMCA_OmicsDense_GEP_CNV_MUT(nn.Module):
+class MCA_OmicsDense_GEP_CNV_MUT(nn.Module):
     """Based on the MCA model in Molecular Pharmaceutics:
         https://pubs.acs.org/doi/10.1021/acs.molpharmaceut.9b00520.
         Updates:
@@ -72,7 +72,7 @@ class Conv_NonTransMCA_OmicsDense_GEP_CNV_MUT(nn.Module):
                 for the smiles sequence. Defaults to 64.
     """
 
-        super(Conv_NonTransMCA_OmicsDense_GEP_CNV_MUT, self).__init__(*args, **kwargs)
+        super(MCA_OmicsDense_GEP_CNV_MUT, self).__init__(*args, **kwargs)
 
         # Model Parameter
         self.device = get_device()
@@ -362,25 +362,20 @@ class Conv_NonTransMCA_OmicsDense_GEP_CNV_MUT(nn.Module):
             )
         )
 
-    def forward(self, smiles, omics, confidence=False):
+    def forward(self, smiles, gep, cnv, mut):
         """Forward pass through the PaccMannV2.
 
         Args:
             smiles (torch.Tensor): of type int and shape: [bs, smiles_padding_length]
-            omics (torch.Tensor): of shape `[bs, number_of_genes]`.
-            confidence (bool, optional) whether the confidence estimates are
-                performed.
+            gep (torch.Tensor): of type float and shape: [bs, number_of_genes]
+            cnv (torch.Tensor): of type float and shape: [bs, number_of_genes]
+            mut (torch.Tensor): of type float and shape: [bs, number_of_genes]
 
         Returns:
             (torch.Tensor, dict): predictions, prediction_dict
             predictions is IC50 drug sensitivity prediction of shape `[bs, 1]`.
             prediction_dict includes the prediction and attention weights.
         """
-        # 将omics分为三部分，以number_of_genes为分界线
-        gep = omics[:, :self.number_of_genes]
-        cnv = omics[:, self.number_of_genes:2 * self.number_of_genes]
-        mut = omics[:, 2 * self.number_of_genes:]
-
         gep = torch.unsqueeze(gep, dim=-1)
         cnv = torch.unsqueeze(cnv, dim=-1)
         mut = torch.unsqueeze(mut, dim=-1)
@@ -492,33 +487,6 @@ class Conv_NonTransMCA_OmicsDense_GEP_CNV_MUT(nn.Module):
                         ic50_min=self.IC50_min
                     ) if self.min_max_scaling else predictions
             })  # yapf: disable
-
-            if confidence:
-                augmenter = AugmentTensor(self.smiles_language)
-                epi_conf, epi_pred = monte_carlo_dropout(
-                    self,
-                    regime='tensors',
-                    tensors=(smiles, omics),
-                    repetitions=5
-                )
-                ale_conf, ale_pred = test_time_augmentation(
-                    self,
-                    regime='tensors',
-                    tensors=(smiles, omics),
-                    repetitions=5,
-                    augmenter=augmenter,
-                    tensors_to_augment=0
-                )
-
-                prediction_dict.update({
-                    'epistemic_confidence': epi_conf,
-                    'epistemic_predictions': epi_pred,
-                    'aleatoric_confidence': ale_conf,
-                    'aleatoric_predictions': ale_pred
-                })  # yapf: disable
-
-        elif confidence:
-            logger.info('Using confidence in training mode is not supported.')
 
         return predictions, prediction_dict
 

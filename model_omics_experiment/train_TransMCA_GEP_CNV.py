@@ -137,7 +137,7 @@ def main(
             "gene_expression_processing_parameters": {},
         }
     )
-    model_name = params.get("model_fn", "conv_trans_mca_GEP_CNV")
+    model_name = params.get("model_fn", "trans_mca_dense_GEP_CNV")
     model = MODEL_FACTORY[model_name](params).to(device)
     model._associate_language(smiles_language)
 
@@ -305,7 +305,7 @@ if __name__ == "__main__":
     smiles_language_filepath = 'data/smiles_language/tokenizer_customized'
     model_path = 'result/model'
     params_filepath = 'data/params/TransMCA_GEP_CNV.json'
-    training_name = 'CONV_TRANS_MCA_GEP_CNV(Cardinality_Analysis)_MEDICUS619_Clipping'
+    training_name = 'TRANS_MCA_GEP_CNV(Cardinality_Analysis)_MEDICUS619_Clipping'
     # run the training
     main(
         train_sensitivity_filepath,
