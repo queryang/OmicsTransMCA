@@ -21,17 +21,20 @@ MODEL_FACTORY = {
     'trans_mca_dense_GEP_CNV': Conv_TransMCA_GEP_CNV,
     'trans_mca_dense_GEP': Conv_TransMCA_GEP,
     'trans_mca_dense_GEP_MUT': Conv_TransMCA_GEP_MUT,
-    'mca_dense_GEP_CNV_MUT': MCA_OmicsDense_GEP_CNV_MUT,
-    'mca_dense_GEP_CNV': MCA_OmicsDense_GEP_CNV,
-    'mca_dense_GEP_MUT': MCA_OmicsDense_GEP_MUT,
-    'mca_dense_GEP': MCA_OmicsDense_GEP,
-    'mca_GEP_CNV_MUT': MCA_GEP_CNV_MUT,
-    'mca_GEP_CNV': MCA_GEP_CNV,
-    'mca_GEP_MUT': MCA_GEP_MUT,
-    'mca_GEP': MCA_GEP,
+
     'trans_mca_nondense_GEP_CNV_MUT': TransMCA_NonDense_GEP_CNV_MUT,
     'trans_mca_nondense_GEP_CNV': TransMCA_NonDense_GEP_CNV,
     'trans_mca_nondense_GEP_MUT': TransMCA_NonDense_GEP_MUT,
     'trans_mca_nondense_GEP': TransMCA_NonDense_GEP,
+
+    'mca_dense_GEP_CNV_MUT': MCA_OmicsDense_GEP_CNV_MUT,
+    'mca_dense_GEP_CNV': MCA_OmicsDense_GEP_CNV,
+    'mca_dense_GEP_MUT': MCA_OmicsDense_GEP_MUT,
+    'mca_dense_GEP': MCA_OmicsDense_GEP,
+
+    'mca_GEP_CNV_MUT': MCA_GEP_CNV_MUT,
+    'mca_GEP_CNV': MCA_GEP_CNV,
+    'mca_GEP_MUT': MCA_GEP_MUT,
+    'mca_GEP': MCA_GEP,
 
 }
