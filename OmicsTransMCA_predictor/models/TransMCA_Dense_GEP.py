@@ -7,12 +7,10 @@ import torch
 import torch.nn as nn
 from pytoda.smiles.transforms import AugmentTensor
 
-from ..utils.hyperparams import ACTIVATION_FN_FACTORY, LOSS_FN_FACTORY
-from ..utils.interpret import monte_carlo_dropout, test_time_augmentation
-from ..utils.layers import (
-    ContextAttentionLayer, dense_layer, convolutional_layer
-)
-from ..utils.utils import get_device, get_log_molar
+from OmicsTransMCA_predictor.utils.hyperparams import LOSS_FN_FACTORY, ACTIVATION_FN_FACTORY
+from OmicsTransMCA_predictor.utils.interpret import monte_carlo_dropout, test_time_augmentation
+from OmicsTransMCA_predictor.utils.layers import convolutional_layer, ContextAttentionLayer, dense_layer
+from OmicsTransMCA_predictor.utils.utils import get_device, get_log_molar
 
 # setup logging
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)

@@ -7,25 +7,22 @@ import torch
 import torch.nn as nn
 from pytoda.smiles.transforms import AugmentTensor
 
-from ..utils.hyperparams import ACTIVATION_FN_FACTORY, LOSS_FN_FACTORY
-from ..utils.interpret import monte_carlo_dropout, test_time_augmentation
-from ..utils.layers import (
-    ContextAttentionLayer, dense_layer, convolutional_layer
-)
-from ..utils.utils import get_device, get_log_molar
+from OmicsTransMCA_predictor.utils.hyperparams import LOSS_FN_FACTORY, ACTIVATION_FN_FACTORY
+from OmicsTransMCA_predictor.utils.interpret import monte_carlo_dropout, test_time_augmentation
+from OmicsTransMCA_predictor.utils.layers import convolutional_layer, ContextAttentionLayer, dense_layer
+from OmicsTransMCA_predictor.utils.utils import get_device, get_log_molar
 
 # setup logging
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 """
-    四通道（没有使用transformer）；三组学；后期特征融合
-    修改完成
+    五通道；双组学；后期特征融合
 """
 
 
 
-class MCA_OmicsDense_GEP_CNV(nn.Module):
+class Conv_TransMCA_GEP_CNV(nn.Module):
     """Based on the MCA model in Molecular Pharmaceutics:
         https://pubs.acs.org/doi/10.1021/acs.molpharmaceut.9b00520.
         Updates:
@@ -72,7 +69,7 @@ class MCA_OmicsDense_GEP_CNV(nn.Module):
                 for the smiles sequence. Defaults to 64.
     """
 
-        super(MCA_OmicsDense_GEP_CNV, self).__init__(*args, **kwargs)
+        super(Conv_TransMCA_GEP_CNV, self).__init__(*args, **kwargs)
 
         # Model Parameter
         self.device = get_device()
@@ -100,8 +97,10 @@ class MCA_OmicsDense_GEP_CNV(nn.Module):
         # Model architecture (hyperparameter)
         self.molecule_gep_heads = params.get('molecule_gep_heads', [2, 2, 2, 2])
         self.molecule_cnv_heads = params.get('molecule_cnv_heads', [2, 2, 2, 2])
+        self.molecule_mut_heads = params.get('molecule_mut_heads', [2, 2, 2, 2])
         self.gene_heads = params.get('gene_heads', [1, 1, 1, 1])
         self.cnv_heads = params.get('cnv_heads', [1, 1, 1, 1])
+        self.mut_heads = params.get('mut_heads', [1, 1, 1, 1])
         self.n_heads = params.get('n_heads', 1)
         self.num_layers = params.get('num_layers', 2)
         self.omics_dense_size = params.get('omics_dense_size', 128)
@@ -117,7 +116,7 @@ class MCA_OmicsDense_GEP_CNV(nn.Module):
             raise ValueError(
                 'Length of filter and kernel size lists do not match.'
             )
-        if len(self.filters) + 1 != len(self.molecule_gep_heads):
+        if len(self.filters) + 2 != len(self.molecule_gep_heads):
             raise ValueError(
                 'Length of filter and multihead lists do not match'
             )
@@ -126,6 +125,9 @@ class MCA_OmicsDense_GEP_CNV(nn.Module):
                 # 原尺度smiles
                 self.molecule_gep_heads[0] * params['smiles_embedding_size'] +
                 self.molecule_cnv_heads[0] * params['smiles_embedding_size'] +
+                # transformer编码后的smiles 尺度
+                self.molecule_gep_heads[1] * params['smiles_embedding_size'] +
+                self.molecule_cnv_heads[1] * params['smiles_embedding_size'] +
                 # omics
                 sum(self.gene_heads) * self.omics_dense_size +
                 sum(self.cnv_heads) * self.omics_dense_size +
@@ -151,6 +153,11 @@ class MCA_OmicsDense_GEP_CNV(nn.Module):
             scale_grad_by_freq=params.get('embed_scale_grad', False)
         )
 
+        # Transformer Encoder
+        encoder = nn.TransformerEncoderLayer(d_model=self.params['smiles_embedding_size'], nhead=self.n_heads, dropout=self.dropout, batch_first=True)
+        self.transformer_encoder = nn.TransformerEncoder(encoder, self.num_layers)
+
+
         self.convolutional_layers = nn.Sequential(
             OrderedDict(
                 [
@@ -169,7 +176,10 @@ class MCA_OmicsDense_GEP_CNV(nn.Module):
             )
         )
 
-        smiles_hidden_sizes = ([params['smiles_embedding_size']] + self.filters)
+        smiles_hidden_sizes = ([params['smiles_embedding_size']] +
+                               [params['smiles_embedding_size']] + self.filters)
+
+
 
         self.molecule_attention_layers_gep = nn.Sequential(OrderedDict([
             (
@@ -274,7 +284,6 @@ class MCA_OmicsDense_GEP_CNV(nn.Module):
             ) for layer in range(len(self.molecule_cnv_heads))
             for head in range(self.cnv_heads[layer])
             ]))  # yapf: disable
-
         # Only applied if params['batch_norm'] = True
         self.batch_norm = nn.BatchNorm1d(self.hidden_sizes[0])
         self.dense_layers = nn.Sequential(
@@ -323,8 +332,11 @@ class MCA_OmicsDense_GEP_CNV(nn.Module):
         cnv = torch.unsqueeze(cnv, dim=-1)
         embedded_smiles = self.smiles_embedding(smiles.to(dtype=torch.int64))
 
+        # Transformer Encoder
+        trans_smiles = self.transformer_encoder(embedded_smiles)
+
         # SMILES Convolutions. Unsqueeze has shape bs x 1 x T x H.
-        encoded_smiles = [embedded_smiles] + [
+        encoded_smiles = [embedded_smiles] + [trans_smiles] + [
             self.convolutional_layers[ind]
             (torch.unsqueeze(embedded_smiles, 1)).permute(0, 2, 1)
             for ind in range(len(self.convolutional_layers))

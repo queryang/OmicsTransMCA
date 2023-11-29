@@ -8,10 +8,10 @@ from time import time
 import torch
 
 from model_omics_experiment.tools.OmicsDrugSensitivityDataset_GEP_CNV_MUT import OmicsDrugSensitivityDataset_GEP_CNV_MUT
-from model.OmicsTransMCA_predictor.models import MODEL_FACTORY
-from model.OmicsTransMCA_predictor.utils.hyperparams import OPTIMIZER_FACTORY
-from model.OmicsTransMCA_predictor.utils.loss_functions import pearsonr, r2_score
-from model.OmicsTransMCA_predictor.utils.utils import get_device, get_log_molar
+from OmicsTransMCA_predictor.models import MODEL_FACTORY
+from OmicsTransMCA_predictor.utils.hyperparams import OPTIMIZER_FACTORY
+from OmicsTransMCA_predictor.utils.loss_functions import pearsonr, r2_score
+from OmicsTransMCA_predictor.utils.utils import get_device, get_log_molar
 from sklearn.model_selection import KFold
 from pytoda.smiles.smiles_language import SMILESTokenizer
 

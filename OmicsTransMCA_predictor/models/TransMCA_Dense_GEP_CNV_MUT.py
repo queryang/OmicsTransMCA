@@ -7,25 +7,22 @@ import torch
 import torch.nn as nn
 from pytoda.smiles.transforms import AugmentTensor
 
-from ..utils.hyperparams import ACTIVATION_FN_FACTORY, LOSS_FN_FACTORY
-from ..utils.interpret import monte_carlo_dropout, test_time_augmentation
-from ..utils.layers import (
-    ContextAttentionLayer, dense_layer, convolutional_layer
-)
-from ..utils.utils import get_device, get_log_molar
+from OmicsTransMCA_predictor.utils.hyperparams import LOSS_FN_FACTORY, ACTIVATION_FN_FACTORY
+from OmicsTransMCA_predictor.utils.interpret import monte_carlo_dropout, test_time_augmentation
+from OmicsTransMCA_predictor.utils.layers import convolutional_layer, ContextAttentionLayer, dense_layer
+from OmicsTransMCA_predictor.utils.utils import get_device, get_log_molar
 
 # setup logging
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 """
-    五通道（没有使用OmicsDense）；三组学；后期特征融合
-    
+    五通道；三组学；后期特征融合
 """
 
 
 
-class Conv_NonTransMCA_GEP_CNV_MUT(nn.Module):
+class Conv_TransMCA_GEP_CNV_MUT(nn.Module):
     """Based on the MCA model in Molecular Pharmaceutics:
         https://pubs.acs.org/doi/10.1021/acs.molpharmaceut.9b00520.
         Updates:
@@ -72,7 +69,7 @@ class Conv_NonTransMCA_GEP_CNV_MUT(nn.Module):
                 for the smiles sequence. Defaults to 64.
     """
 
-        super(Conv_NonTransMCA_GEP_CNV_MUT, self).__init__(*args, **kwargs)
+        super(Conv_TransMCA_GEP_CNV_MUT, self).__init__(*args, **kwargs)
 
         # Model Parameter
         self.device = get_device()
@@ -92,9 +89,6 @@ class Conv_NonTransMCA_GEP_CNV_MUT(nn.Module):
         # Model inputs
         self.smiles_padding_length = params['smiles_padding_length']
         self.number_of_genes = params.get('number_of_genes', 1857)
-        self.gep_features = self.number_of_genes / 3
-        self.cnv_features = self.number_of_genes / 3
-        self.mut_features = self.number_of_genes / 3
         self.smiles_attention_size = params.get('smiles_attention_size', 64)
         self.gene_attention_size = params.get('gene_attention_size', 1)
         self.molecule_temperature = params.get('molecule_temperature', 1.)
@@ -122,7 +116,7 @@ class Conv_NonTransMCA_GEP_CNV_MUT(nn.Module):
             raise ValueError(
                 'Length of filter and kernel size lists do not match.'
             )
-        if len(self.filters) + 1 != len(self.molecule_gep_heads):
+        if len(self.filters) + 2 != len(self.molecule_gep_heads):
             raise ValueError(
                 'Length of filter and multihead lists do not match'
             )
@@ -132,10 +126,14 @@ class Conv_NonTransMCA_GEP_CNV_MUT(nn.Module):
                 self.molecule_gep_heads[0] * params['smiles_embedding_size'] +
                 self.molecule_cnv_heads[0] * params['smiles_embedding_size'] +
                 self.molecule_mut_heads[0] * params['smiles_embedding_size'] +
+                # transformer编码后的smiles 尺度
+                self.molecule_gep_heads[1] * params['smiles_embedding_size'] +
+                self.molecule_cnv_heads[1] * params['smiles_embedding_size'] +
+                self.molecule_mut_heads[1] * params['smiles_embedding_size'] +
                 # omics
-                sum(self.gene_heads) * self.gep_features +
-                sum(self.cnv_heads) * self.cnv_features +
-                sum(self.mut_heads) * self.mut_features +
+                sum(self.gene_heads) * self.omics_dense_size +
+                sum(self.cnv_heads) * self.omics_dense_size +
+                sum(self.mut_heads) * self.omics_dense_size +
                 # 多尺度卷积
                 sum(
                     [
@@ -158,6 +156,11 @@ class Conv_NonTransMCA_GEP_CNV_MUT(nn.Module):
             scale_grad_by_freq=params.get('embed_scale_grad', False)
         )
 
+        # Transformer Encoder
+        encoder = nn.TransformerEncoderLayer(d_model=self.params['smiles_embedding_size'], nhead=self.n_heads, dropout=self.dropout, batch_first=True)
+        self.transformer_encoder = nn.TransformerEncoder(encoder, self.num_layers)
+
+
         self.convolutional_layers = nn.Sequential(
             OrderedDict(
                 [
@@ -176,7 +179,10 @@ class Conv_NonTransMCA_GEP_CNV_MUT(nn.Module):
             )
         )
 
-        smiles_hidden_sizes = ([params['smiles_embedding_size']] + self.filters)
+        smiles_hidden_sizes = ([params['smiles_embedding_size']] +
+                               [params['smiles_embedding_size']] + self.filters)
+
+
 
         self.molecule_attention_layers_gep = nn.Sequential(OrderedDict([
             (
@@ -289,6 +295,50 @@ class Conv_NonTransMCA_GEP_CNV_MUT(nn.Module):
             for head in range(self.mut_heads[layer])
         ]))
 
+        # Omics dense stream
+        # GEP
+        self.gep_dense_layers = nn.Sequential(OrderedDict([
+            (
+                f'gep_dense_{layer}_head_{head}',
+                dense_layer(
+                    self.number_of_genes,
+                    self.omics_dense_size,
+                    act_fn=self.act_fn,
+                    dropout=self.dropout,
+                    batch_norm=params.get('batch_norm', True)
+                ).to(self.device)
+            ) for layer in range(len(self.molecule_gep_heads))
+            for head in range(self.gene_heads[layer])
+            ]))  # yapf: disable
+        # CNV
+        self.cnv_dense_layers = nn.Sequential(OrderedDict([
+            (
+                f'cnv_dense_{layer}_head_{head}',
+                dense_layer(
+                    self.number_of_genes,
+                    self.omics_dense_size,
+                    act_fn=self.act_fn,
+                    dropout=self.dropout,
+                    batch_norm=params.get('batch_norm', True)
+                ).to(self.device)
+            ) for layer in range(len(self.molecule_cnv_heads))
+            for head in range(self.cnv_heads[layer])
+            ]))  # yapf: disable
+        # MUT
+        self.mut_dense_layers = nn.Sequential(OrderedDict([
+            (
+                f'mut_dense_{layer}_head_{head}',
+                dense_layer(
+                    self.number_of_genes,
+                    self.omics_dense_size,
+                    act_fn=self.act_fn,
+                    dropout=self.dropout,
+                    batch_norm=params.get('batch_norm', True)
+                ).to(self.device)
+            ) for layer in range(len(self.molecule_mut_heads))
+            for head in range(self.mut_heads[layer])
+            ]))  # yapf: disable
+
         # Only applied if params['batch_norm'] = True
         self.batch_norm = nn.BatchNorm1d(self.hidden_sizes[0])
         self.dense_layers = nn.Sequential(
@@ -320,32 +370,30 @@ class Conv_NonTransMCA_GEP_CNV_MUT(nn.Module):
             )
         )
 
-    def forward(self, smiles, omics, confidence=False):
+    def forward(self, smiles, gep, cnv, mut):
         """Forward pass through the PaccMannV2.
 
         Args:
             smiles (torch.Tensor): of type int and shape: [bs, smiles_padding_length]
-            omics (torch.Tensor): of shape `[bs, number_of_genes]`.
-            confidence (bool, optional) whether the confidence estimates are
-                performed.
+            gep (torch.Tensor): of type float and shape: [bs, number_of_genes]
+            cnv (torch.Tensor): of type float and shape: [bs, number_of_genes]
+            mut (torch.Tensor): of type float and shape: [bs, number_of_genes]
 
         Returns:
             (torch.Tensor, dict): predictions, prediction_dict
             predictions is IC50 drug sensitivity prediction of shape `[bs, 1]`.
             prediction_dict includes the prediction and attention weights.
         """
-        # 将omics分为三部分，以number_of_genes为分界线
-        gep = omics[:, :self.number_of_genes]
-        cnv = omics[:, self.number_of_genes:2 * self.number_of_genes]
-        mut = omics[:, 2 * self.number_of_genes:]
-
         gep = torch.unsqueeze(gep, dim=-1)
         cnv = torch.unsqueeze(cnv, dim=-1)
         mut = torch.unsqueeze(mut, dim=-1)
         embedded_smiles = self.smiles_embedding(smiles.to(dtype=torch.int64))
 
+        # Transformer Encoder
+        trans_smiles = self.transformer_encoder(embedded_smiles)
+
         # SMILES Convolutions. Unsqueeze has shape bs x 1 x T x H.
-        encoded_smiles = [embedded_smiles] + [
+        encoded_smiles = [embedded_smiles] + [trans_smiles] + [
             self.convolutional_layers[ind]
             (torch.unsqueeze(embedded_smiles, 1)).permute(0, 2, 1)
             for ind in range(len(self.convolutional_layers))
@@ -370,7 +418,7 @@ class Conv_NonTransMCA_GEP_CNV_MUT(nn.Module):
                     encoded_smiles[layer], cnv
                 )
                 encodings.append(e)
-                # smiles_alphas_cnv.append(a)
+                smiles_alphas_cnv.append(a)
 
         for layer in range(len(self.molecule_mut_heads)):
             for head in range(self.molecule_mut_heads[layer]):
@@ -379,7 +427,7 @@ class Conv_NonTransMCA_GEP_CNV_MUT(nn.Module):
                     encoded_smiles[layer], mut
                 )
                 encodings.append(e)
-                # smiles_alphas_mut.append(a)
+                smiles_alphas_mut.append(a)
 
         # Gene context attention
         for layer in range(len(self.gene_heads)):
@@ -389,6 +437,8 @@ class Conv_NonTransMCA_GEP_CNV_MUT(nn.Module):
                 e, a = self.gene_attention_layers[ind](
                     gep, encoded_smiles[layer], average_seq=False
                 )
+                # TODO: 加入Dense层提取特征（降维）
+                e = self.gep_dense_layers[ind](e)
                 encodings.append(e)
                 gene_alphas.append(a)
 
@@ -399,8 +449,10 @@ class Conv_NonTransMCA_GEP_CNV_MUT(nn.Module):
                 e, a = self.cnv_attention_layers[ind](
                     cnv, encoded_smiles[layer], average_seq=False
                 )
+                # TODO: 加入Dense层提取特征（降维）
+                e = self.cnv_dense_layers[ind](e)
                 encodings.append(e)
-                # cnv_alphas.append(a)
+                cnv_alphas.append(a)
 
         for layer in range(len(self.mut_heads)):
             for head in range(self.mut_heads[layer]):
@@ -409,8 +461,10 @@ class Conv_NonTransMCA_GEP_CNV_MUT(nn.Module):
                 e, a = self.mut_attention_layers[ind](
                     mut, encoded_smiles[layer], average_seq=False
                 )
+                # TODO: 加入Dense层提取特征（降维）
+                e = self.mut_dense_layers[ind](e)
                 encodings.append(e)
-                # mut_alphas.append(a)
+                mut_alphas.append(a)
 
         encodings = torch.cat(encodings, dim=1)
 
@@ -427,15 +481,31 @@ class Conv_NonTransMCA_GEP_CNV_MUT(nn.Module):
 
         if not self.training:
             # The below is to ease postprocessing
-            smiles_attention = torch.cat(
+            smiles_attention_gep = torch.cat(
                 [torch.unsqueeze(p, -1) for p in smiles_alphas_gep], dim=-1
+            )
+            smiles_attention_cnv = torch.cat(
+                [torch.unsqueeze(p, -1) for p in smiles_alphas_cnv], dim=-1
+            )
+            smiles_attention_mut = torch.cat(
+                [torch.unsqueeze(p, -1) for p in smiles_alphas_mut], dim=-1
             )
             gene_attention = torch.cat(
                 [torch.unsqueeze(p, -1) for p in gene_alphas], dim=-1
             )
+            cnv_attention = torch.cat(
+                [torch.unsqueeze(p, -1) for p in cnv_alphas], dim=-1
+            )
+            mut_attention = torch.cat(
+                [torch.unsqueeze(p, -1) for p in mut_alphas], dim=-1
+            )
             prediction_dict.update({
                 'gene_attention': gene_attention,
-                'smiles_attention': smiles_attention,
+                'cnv_attention': cnv_attention,
+                'mut_attention': mut_attention,
+                'smiles_attention_gep': smiles_attention_gep,
+                'smiles_attention_cnv': smiles_attention_cnv,
+                'smiles_attention_mut': smiles_attention_mut,
                 'IC50': predictions,
                 'log_micromolar_IC50':
                     get_log_molar(
@@ -445,32 +515,6 @@ class Conv_NonTransMCA_GEP_CNV_MUT(nn.Module):
                     ) if self.min_max_scaling else predictions
             })  # yapf: disable
 
-            if confidence:
-                augmenter = AugmentTensor(self.smiles_language)
-                epi_conf, epi_pred = monte_carlo_dropout(
-                    self,
-                    regime='tensors',
-                    tensors=(smiles, omics),
-                    repetitions=5
-                )
-                ale_conf, ale_pred = test_time_augmentation(
-                    self,
-                    regime='tensors',
-                    tensors=(smiles, omics),
-                    repetitions=5,
-                    augmenter=augmenter,
-                    tensors_to_augment=0
-                )
-
-                prediction_dict.update({
-                    'epistemic_confidence': epi_conf,
-                    'epistemic_predictions': epi_pred,
-                    'aleatoric_confidence': ale_conf,
-                    'aleatoric_predictions': ale_pred
-                })  # yapf: disable
-
-        elif confidence:
-            logger.info('Using confidence in training mode is not supported.')
 
         return predictions, prediction_dict
 
