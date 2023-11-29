@@ -292,7 +292,7 @@ if __name__ == "__main__":
     test_sensitivity_filepath = 'data/drug_sensitivity_MixedSet_test.csv'
     gep_filepath = 'data/OmicsExpressionProteinCodingGenesTPMLogp1-23Q2_Only_MEDICUS_GSVA.csv'
     smi_filepath = 'data/ccle-gdsc.smi'
-    gene_filepath = 'data/MEDICUS_Omics_1857_pathways.pkl'
+    gene_filepath = 'data/MUDICUS_Omic_619_pathways.pkl'
     smiles_language_filepath = 'data/smiles_language/tokenizer_customized'
     model_path = 'result/model'
     params_filepath = 'data/params/TransMCA_GEP.json'

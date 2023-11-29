@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 # TODO: 五通道组学特征不降维导致模型过大，极有可能出现过拟合；这部分模型可能需要丢弃
 
 
-class TransMCA_NonDense_GEP_CNV_MUT(nn.Module):
+class TransMCA_NonDense_GEP_MUT(nn.Module):
     """Based on the MCA model in Molecular Pharmaceutics:
         https://pubs.acs.org/doi/10.1021/acs.molpharmaceut.9b00520.
         Updates:
@@ -69,7 +69,7 @@ class TransMCA_NonDense_GEP_CNV_MUT(nn.Module):
                 for the smiles sequence. Defaults to 64.
     """
 
-        super(TransMCA_NonDense_GEP_CNV_MUT, self).__init__(*args, **kwargs)
+        super(TransMCA_NonDense_GEP_MUT, self).__init__(*args, **kwargs)
 
         # Model Parameter
         self.device = get_device()
@@ -99,10 +99,8 @@ class TransMCA_NonDense_GEP_CNV_MUT(nn.Module):
 
         # Model architecture (hyperparameter)
         self.molecule_gep_heads = params.get('molecule_gep_heads', [2, 2, 2, 2])
-        self.molecule_cnv_heads = params.get('molecule_cnv_heads', [2, 2, 2, 2])
         self.molecule_mut_heads = params.get('molecule_mut_heads', [2, 2, 2, 2])
         self.gene_heads = params.get('gene_heads', [1, 1, 1, 1])
-        self.cnv_heads = params.get('cnv_heads', [1, 1, 1, 1])
         self.mut_heads = params.get('mut_heads', [1, 1, 1, 1])
         self.n_heads = params.get('n_heads', 1)
         self.num_layers = params.get('num_layers', 2)
@@ -127,15 +125,12 @@ class TransMCA_NonDense_GEP_CNV_MUT(nn.Module):
             [
                 # 原尺度smiles
                 self.molecule_gep_heads[0] * params['smiles_embedding_size'] +
-                self.molecule_cnv_heads[0] * params['smiles_embedding_size'] +
                 self.molecule_mut_heads[0] * params['smiles_embedding_size'] +
                 # transformer编码后的smiles 尺度
                 self.molecule_gep_heads[1] * params['smiles_embedding_size'] +
-                self.molecule_cnv_heads[1] * params['smiles_embedding_size'] +
                 self.molecule_mut_heads[1] * params['smiles_embedding_size'] +
                 # omics
                 sum(self.gene_heads) * self.gep_features +
-                sum(self.cnv_heads) * self.cnv_features +
                 sum(self.mut_heads) * self.mut_features +
                 # 多尺度卷积
                 sum(
@@ -143,7 +138,7 @@ class TransMCA_NonDense_GEP_CNV_MUT(nn.Module):
                         h * f
                         for h, f in zip(self.molecule_gep_heads[1:], self.filters)
                     ]
-                ) * 3   # 组学数据数量
+                ) * 2   # 组学数据数量
             ] + params.get('stacked_dense_hidden_sizes', [1024, 512])
         )
 
@@ -202,24 +197,6 @@ class TransMCA_NonDense_GEP_CNV_MUT(nn.Module):
             for head in range(self.molecule_gep_heads[layer])
         ]))  # yapf: disable
 
-        self.molecule_attention_layers_cnv = nn.Sequential(OrderedDict([
-            (
-                f'molecule_cnv_attention_{layer}_head_{head}',
-                ContextAttentionLayer(
-                    reference_hidden_size=smiles_hidden_sizes[layer],
-                    reference_sequence_length=self.smiles_padding_length,
-                    context_hidden_size=1,
-                    context_sequence_length=self.number_of_genes,
-                    attention_size=self.smiles_attention_size,
-                    individual_nonlinearity=params.get(
-                        'context_nonlinearity', nn.Sequential()
-                    ),
-                    temperature=self.molecule_temperature
-                )
-            ) for layer in range(len(self.molecule_cnv_heads))
-            for head in range(self.molecule_cnv_heads[layer])
-        ]))
-
         self.molecule_attention_layers_mut = nn.Sequential(OrderedDict([
             (
                 f'molecule_mut_attention_{layer}_head_{head}',
@@ -256,25 +233,6 @@ class TransMCA_NonDense_GEP_CNV_MUT(nn.Module):
             ) for layer in range(len(self.molecule_gep_heads))
             for head in range(self.gene_heads[layer])
         ]))  # yapf: disable
-
-        # CNV attention stream
-        self.cnv_attention_layers = nn.Sequential(OrderedDict([
-            (
-                f'cnv_attention_{layer}_head_{head}',
-                ContextAttentionLayer(
-                    reference_hidden_size=1,
-                    reference_sequence_length=self.number_of_genes,
-                    context_hidden_size=smiles_hidden_sizes[layer],
-                    context_sequence_length=self.smiles_padding_length,
-                    attention_size=self.gene_attention_size,
-                    individual_nonlinearity=params.get(
-                        'context_nonlinearity', nn.Sequential()
-                    ),
-                    temperature=self.gene_temperature
-                )
-            ) for layer in range(len(self.molecule_cnv_heads))
-            for head in range(self.cnv_heads[layer])
-        ]))
 
         # MUT attention stream
         self.mut_attention_layers = nn.Sequential(OrderedDict([
@@ -326,13 +284,12 @@ class TransMCA_NonDense_GEP_CNV_MUT(nn.Module):
             )
         )
 
-    def forward(self, smiles, gep, cnv, mut):
+    def forward(self, smiles, gep, mut):
         """Forward pass through the PaccMannV2.
 
         Args:
             smiles (torch.Tensor): of type int and shape: [bs, smiles_padding_length]
             gep (torch.Tensor): of type float and shape: [bs, number_of_genes]
-            cnv (torch.Tensor): of type float and shape: [bs, number_of_genes]
             mut (torch.Tensor): of type float and shape: [bs, number_of_genes]
 
         Returns:
@@ -342,7 +299,6 @@ class TransMCA_NonDense_GEP_CNV_MUT(nn.Module):
         """
 
         gep = torch.unsqueeze(gep, dim=-1)
-        cnv = torch.unsqueeze(cnv, dim=-1)
         mut = torch.unsqueeze(mut, dim=-1)
         embedded_smiles = self.smiles_embedding(smiles.to(dtype=torch.int64))
 
@@ -368,15 +324,6 @@ class TransMCA_NonDense_GEP_CNV_MUT(nn.Module):
                 encodings.append(e)
                 smiles_alphas_gep.append(a)
 
-        for layer in range(len(self.molecule_cnv_heads)):
-            for head in range(self.molecule_cnv_heads[layer]):
-                ind = self.molecule_cnv_heads[0] * layer + head
-                e, a = self.molecule_attention_layers_cnv[ind](
-                    encoded_smiles[layer], cnv
-                )
-                encodings.append(e)
-                # smiles_alphas_cnv.append(a)
-
         for layer in range(len(self.molecule_mut_heads)):
             for head in range(self.molecule_mut_heads[layer]):
                 ind = self.molecule_mut_heads[0] * layer + head
@@ -396,16 +343,6 @@ class TransMCA_NonDense_GEP_CNV_MUT(nn.Module):
                 )
                 encodings.append(e)
                 gene_alphas.append(a)
-
-        for layer in range(len(self.cnv_heads)):
-            for head in range(self.cnv_heads[layer]):
-                ind = self.cnv_heads[0] * layer + head
-
-                e, a = self.cnv_attention_layers[ind](
-                    cnv, encoded_smiles[layer], average_seq=False
-                )
-                encodings.append(e)
-                # cnv_alphas.append(a)
 
         for layer in range(len(self.mut_heads)):
             for head in range(self.mut_heads[layer]):

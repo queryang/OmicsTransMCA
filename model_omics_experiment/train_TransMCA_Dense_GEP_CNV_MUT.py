@@ -304,7 +304,7 @@ if __name__ == "__main__":
     cnv_filepath = 'data/CNV_Cardinality_analysis_of_variance_Latest_MEDICUS.csv'
     mut_filepath = 'data/MUT_cardinality_analysis_of_variance_Only_MEDICUS.csv'
     smi_filepath = 'data/ccle-gdsc.smi'
-    gene_filepath = 'data/MEDICUS_Omics_1857_pathways.pkl'
+    gene_filepath = 'data/MUDICUS_Omic_619_pathways.pkl'
     smiles_language_filepath = 'data/smiles_language/tokenizer_customized'
     model_path = 'result/model'
     params_filepath = 'data/params/TransMCA_GEP_CNV_MUT.json'
