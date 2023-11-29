@@ -2,7 +2,10 @@ from OmicsTransMCA_predictor.models.MCA_Dense_GEP import MCA_OmicsDense_GEP
 from OmicsTransMCA_predictor.models.MCA_Dense_GEP_CNV import MCA_OmicsDense_GEP_CNV
 from OmicsTransMCA_predictor.models.MCA_Dense_GEP_CNV_MUT import MCA_OmicsDense_GEP_CNV_MUT
 from OmicsTransMCA_predictor.models.MCA_Dense_GEP_MUT import MCA_OmicsDense_GEP_MUT
+from OmicsTransMCA_predictor.models.MCA_GEP import MCA_GEP
+from OmicsTransMCA_predictor.models.MCA_GEP_CNV import MCA_GEP_CNV
 from OmicsTransMCA_predictor.models.MCA_GEP_CNV_MUT import MCA_GEP_CNV_MUT
+from OmicsTransMCA_predictor.models.MCA_GEP_MUT import MCA_GEP_MUT
 from OmicsTransMCA_predictor.models.TransMCA_Dense_GEP import Conv_TransMCA_GEP
 from OmicsTransMCA_predictor.models.TransMCA_Dense_GEP_CNV import Conv_TransMCA_GEP_CNV
 from OmicsTransMCA_predictor.models.TransMCA_Dense_GEP_CNV_MUT import Conv_TransMCA_GEP_CNV_MUT
@@ -19,4 +22,8 @@ MODEL_FACTORY = {
     'mca_dense_GEP_MUT': MCA_OmicsDense_GEP_MUT,
     'mca_dense_GEP': MCA_OmicsDense_GEP,
     'mca_GEP_CNV_MUT': MCA_GEP_CNV_MUT,
+    'mca_GEP_CNV': MCA_GEP_CNV,
+    'mca_GEP_MUT': MCA_GEP_MUT,
+    'mca_GEP': MCA_GEP,
+
 }
