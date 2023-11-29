@@ -110,7 +110,7 @@ def main(
     test_loader = torch.utils.data.DataLoader(
         dataset=test_dataset,
         batch_size=params["batch_size"],
-        shuffle=True,
+        shuffle=False,
         drop_last=True,
         num_workers=params.get("num_workers", 4),
     )

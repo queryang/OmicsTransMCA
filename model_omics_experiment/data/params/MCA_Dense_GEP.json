@@ -2,7 +2,7 @@
     "drug_sensitivity_min_max": true,
     "augment_smiles": true,
     "smiles_start_stop_token": true,
-    "number_of_genes": 1857,
+    "number_of_genes": 619,
     "smiles_padding_length": 256,
     "stacked_dense_hidden_sizes": [
         1024,
@@ -49,7 +49,7 @@
     "gene_attention_size": 1,
     "embed_scale_grad": false,
     "final_activation": true,
-    "batch_size": 128,
+    "batch_size": 192,
     "lr": 0.001,
     "optimizer": "adam",
     "loss_fn": "mse",

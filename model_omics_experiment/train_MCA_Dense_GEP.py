@@ -11,17 +11,17 @@ from model.OmicsTransMCA_predictor.models import MODEL_FACTORY
 from model.OmicsTransMCA_predictor.utils.hyperparams import OPTIMIZER_FACTORY
 from model.OmicsTransMCA_predictor.utils.loss_functions import pearsonr, r2_score
 from model.OmicsTransMCA_predictor.utils.utils import get_device, get_log_molar
-from pytoda.datasets import DrugSensitivityDataset
 from pytoda.smiles.smiles_language import SMILESTokenizer
 
+from model_omics_experiment.tools.OmicsDrugSensitivityDataset_GEP import OmicsDrugSensitivityDataset_GEP
 from model_omics_experiment.tools.OmicsDrugSensitivityDataset_GEP_CNV import OmicsDrugSensitivityDataset_GEP_CNV
+from model_omics_experiment.tools.OmicsDrugSensitivityDataset_GEP_CNV_MUT import OmicsDrugSensitivityDataset_GEP_CNV_MUT
 
 
 def main(
     train_sensitivity_filepath,
     test_sensitivity_filepath,
     gep_filepath,
-    cnv_filepath,
     smi_filepath,
     gene_filepath,
     smiles_language_filepath,
@@ -83,13 +83,11 @@ def main(
 
     # Load the datasets
     # OmicsDrugSensitivityDataset 重写的数据集class
-    train_dataset = OmicsDrugSensitivityDataset_GEP_CNV(
+    train_dataset = OmicsDrugSensitivityDataset_GEP(
         drug_sensitivity_filepath=train_sensitivity_filepath,
         smiles_filepath=smi_filepath,
         gep_filepath=gep_filepath,
-        cnv_filepath=cnv_filepath,
         gep_standardize=params.get("gep_standardize", False),
-        cnv_standardize=params.get("cnv_standardize", False),
         smiles_language=smiles_language,
         drug_sensitivity_min_max=params.get("drug_sensitivity_min_max", True),
         iterate_dataset=False,
@@ -101,13 +99,11 @@ def main(
         drop_last=True,
         num_workers=params.get("num_workers", 4),
     )
-    test_dataset = OmicsDrugSensitivityDataset_GEP_CNV(
+    test_dataset = OmicsDrugSensitivityDataset_GEP(
         drug_sensitivity_filepath=test_sensitivity_filepath,
         smiles_filepath=smi_filepath,
         gep_filepath=gep_filepath,
-        cnv_filepath=cnv_filepath,
         gep_standardize=params.get("gep_standardize", False),
-        cnv_standardize=params.get("cnv_standardize", False),
         smiles_language=smiles_language,
         drug_sensitivity_min_max=params.get("drug_sensitivity_min_max", True),
         iterate_dataset=False,
@@ -131,13 +127,13 @@ def main(
     save_top_model = os.path.join(model_dir, "weights/{}_{}_{}.pt")
     params.update(
         {  # yapf: disable
-            "number_of_genes": int(len(pathway_list)/3),
+            "number_of_genes": len(pathway_list),
             "smiles_vocabulary_size": smiles_language.number_of_tokens,
             "drug_sensitivity_processing_parameters": train_dataset.drug_sensitivity_processing_parameters,
             "gene_expression_processing_parameters": {},
         }
     )
-    model_name = params.get("model_fn", "trans_mca_dense_GEP_CNV")
+    model_name = params.get("model_fn", "mca_dense_GEP")
     model = MODEL_FACTORY[model_name](params).to(device)
     model._associate_language(smiles_language)
 
@@ -183,9 +179,9 @@ def main(
         print(f"== Epoch [{epoch}/{params['epochs']}] ==")
         train_loss = 0
 
-        for ind, (smiles, gep, cnv, y) in enumerate(train_loader):
+        for ind, (smiles, gep, y) in enumerate(train_loader):
             y_hat, pred_dict = model(
-                torch.squeeze(smiles.to(device)), gep.to(device), cnv.to(device))
+                torch.squeeze(smiles.to(device)), gep.to(device))
             loss = model.loss(y_hat, y.to(device))
             optimizer.zero_grad()
             loss.backward()
@@ -210,9 +206,9 @@ def main(
             # labels = []
             log_pres = []
             log_labels = []
-            for ind, (smiles, gep, cnv, y) in enumerate(test_loader):
+            for ind, (smiles, gep, y) in enumerate(test_loader):
                 y_hat, pred_dict = model(
-                    torch.squeeze(smiles.to(device)), gep.to(device), cnv.to(device)
+                    torch.squeeze(smiles.to(device)), gep.to(device)
                 )
                 log_pre = pred_dict.get("log_micromolar_IC50")
                 log_pres.append(log_pre)
@@ -299,19 +295,17 @@ if __name__ == "__main__":
     train_sensitivity_filepath = 'data/drug_sensitivity_MixedSet_train.csv'
     test_sensitivity_filepath = 'data/drug_sensitivity_MixedSet_test.csv'
     gep_filepath = 'data/OmicsExpressionProteinCodingGenesTPMLogp1-23Q2_Only_MEDICUS_GSVA.csv'
-    cnv_filepath = 'data/CNV_Cardinality_analysis_of_variance_Latest_MEDICUS.csv'
     smi_filepath = 'data/ccle-gdsc.smi'
-    gene_filepath = 'data/MEDICUS_Omics_1857_pathways.pkl'
+    gene_filepath = 'data/MUDICUS_Omic_619_pathways.pkl'
     smiles_language_filepath = 'data/smiles_language/tokenizer_customized'
     model_path = 'result/model'
-    params_filepath = 'data/params/TransMCA_GEP_CNV.json'
-    training_name = 'TRANS_MCA_GEP_CNV(Cardinality_Analysis)_MEDICUS619_Clipping'
+    params_filepath = 'data/params/MCA_Dense_GEP.json'
+    training_name = 'MCA_Dense_GEP_CNV(Cardinality_Analysis)_MEDICUS619'
     # run the training
     main(
         train_sensitivity_filepath,
         test_sensitivity_filepath,
         gep_filepath,
-        cnv_filepath,
         smi_filepath,
         gene_filepath,
         smiles_language_filepath,
