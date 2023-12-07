@@ -1,6 +1,6 @@
 # dev date 2023/11/25 14:28
 from typing import Tuple
-
+from sklearn.preprocessing import StandardScaler
 from pytoda.datasets import SMILESTokenizerDataset
 from pytoda.smiles import SMILESLanguage
 from torch.utils.data import Dataset
@@ -52,16 +52,16 @@ class OmicsDrugSensitivityDataset_GEP_CNV(Dataset):
         self.drug_name, self.cell_name, self.label_name = self.column_names
         if gep_filepath is not None:
             self.gep = pd.read_csv(gep_filepath, index_col=0)
+            if gep_standardize:
+                scaler = StandardScaler()
+                self.gep_standardized = scaler.fit_transform(self.gep)
+                self.gep = pd.DataFrame(self.gep_standardized, index=self.gep.index)
         if cnv_filepath is not None:
             self.cnv = pd.read_csv(cnv_filepath, index_col=0)
-
-        if gep_standardize:
-            # TODO: implement
-            pass
-        if cnv_standardize:
-            # TODO: implement
-            pass
-
+            if cnv_standardize:
+                scaler = StandardScaler()
+                self.cnv_standardized = scaler.fit_transform(self.cnv)
+                self.cnv = pd.DataFrame(self.cnv_standardized, index=self.cnv.index)
 
         # SMILES
         self.smiles_dataset = SMILESTokenizerDataset(

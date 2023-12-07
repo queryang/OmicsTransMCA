@@ -12,7 +12,7 @@
     "activation_fn": "relu",
     "dropout": 0.3,
     "batch_norm": true,
-    "gene_expression_standardize": false,
+    "gep_standardize": true,
     "filters": [
         64,
         64,

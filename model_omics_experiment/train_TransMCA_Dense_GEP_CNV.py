@@ -130,7 +130,7 @@ def main(
     save_top_model = os.path.join(model_dir, "weights/{}_{}_{}.pt")
     params.update(
         {  # yapf: disable
-            "number_of_genes": int(len(pathway_list)/3),
+            "number_of_genes": len(pathway_list),
             "smiles_vocabulary_size": smiles_language.number_of_tokens,
             "drug_sensitivity_processing_parameters": train_dataset.drug_sensitivity_processing_parameters,
             "gene_expression_processing_parameters": {},
@@ -303,7 +303,7 @@ if __name__ == "__main__":
     gene_filepath = 'data/MUDICUS_Omic_619_pathways.pkl'
     smiles_language_filepath = 'data/smiles_language/tokenizer_customized'
     model_path = 'result/model'
-    params_filepath = 'data/params/TransMCA_GEP_CNV.json'
+    params_filepath = 'data/params/TransMCA_Dense_GEP_CNV.json'
     training_name = 'TRANS_MCA_GEP_CNV(Cardinality_Analysis)_MEDICUS619_Clipping'
     # run the training
     main(

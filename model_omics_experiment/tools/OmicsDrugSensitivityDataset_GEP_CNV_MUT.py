@@ -1,12 +1,11 @@
 # dev date 2023/11/25 14:28
 from typing import Tuple
-
+from sklearn.preprocessing import StandardScaler
 from pytoda.datasets import SMILESTokenizerDataset
 from pytoda.smiles import SMILESLanguage
 from torch.utils.data import Dataset
 import torch
 import pandas as pd
-
 
 class OmicsDrugSensitivityDataset_GEP_CNV_MUT(Dataset):
     def __init__(self,
@@ -42,7 +41,7 @@ class OmicsDrugSensitivityDataset_GEP_CNV_MUT(Dataset):
                  iterate_dataset: bool = True,
                  ):
         self.drug_sensitivity = pd.read_csv(drug_sensitivity_filepath, index_col=0)
-        self.smiles = pd.read_csv(smiles_filepath,header=None)
+        self.smiles = pd.read_csv(smiles_filepath, header=None)
         self.gep_standardize = gep_standardize
         self.cnv_standardize = cnv_standardize
         self.mut_standardize = mut_standardize
@@ -57,19 +56,22 @@ class OmicsDrugSensitivityDataset_GEP_CNV_MUT(Dataset):
         self.drug_name, self.cell_name, self.label_name = self.column_names
         if gep_filepath is not None:
             self.gep = pd.read_csv(gep_filepath, index_col=0)
+            if gep_standardize:
+                scaler = StandardScaler()
+                self.gep_standardized = scaler.fit_transform(self.gep)
+                self.gep = pd.DataFrame(self.gep_standardized, index=self.gep.index)
         if cnv_filepath is not None:
             self.cnv = pd.read_csv(cnv_filepath, index_col=0)
+            if cnv_standardize:
+                scaler = StandardScaler()
+                self.cnv_standardized = scaler.fit_transform(self.cnv)
+                self.cnv = pd.DataFrame(self.cnv_standardized, index=self.cnv.index)
         if mut_filepath is not None:
             self.mut = pd.read_csv(mut_filepath, index_col=0)
-        if gep_standardize:
-            # TODO: implement
-            pass
-        if cnv_standardize:
-            # TODO: implement
-            pass
-        if mut_standardize:
-            # TODO: implement
-            pass
+            if mut_standardize:
+                scaler = StandardScaler()
+                self.mut_standardized = scaler.fit_transform(self.mut)
+                self.mut = pd.DataFrame(self.mut_standardized, index=self.mut.index)
 
         # SMILES
         self.smiles_dataset = SMILESTokenizerDataset(
