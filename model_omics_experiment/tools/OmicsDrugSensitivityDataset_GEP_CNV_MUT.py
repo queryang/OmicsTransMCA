@@ -1,5 +1,7 @@
 # dev date 2023/11/25 14:28
 from typing import Tuple
+
+from numpy import log
 from sklearn.preprocessing import StandardScaler
 from pytoda.datasets import SMILESTokenizerDataset
 from pytoda.smiles import SMILESLanguage

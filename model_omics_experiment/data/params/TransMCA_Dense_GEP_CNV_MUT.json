@@ -12,7 +12,7 @@
     "activation_fn": "relu",
     "dropout": 0.3,
     "batch_norm": true,
-    "gep_standardize": true,
+    "gep_standardize": false,
     "cnv_standardize": false,
     "mut_standardize": false,
     "filters": [
@@ -81,7 +81,7 @@
     "gene_attention_size": 1,
     "embed_scale_grad": false,
     "final_activation": true,
-    "batch_size": 64,
+    "batch_size": 192,
     "lr": 0.001,
     "optimizer": "adam",
     "loss_fn": "mse",
