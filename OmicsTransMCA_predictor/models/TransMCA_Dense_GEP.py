@@ -150,7 +150,6 @@ class Conv_TransMCA_GEP(nn.Module):
         encoder = nn.TransformerEncoderLayer(d_model=self.params['smiles_embedding_size'], nhead=self.n_heads, dropout=self.dropout, batch_first=True)
         self.transformer_encoder = nn.TransformerEncoder(encoder, self.num_layers)
 
-
         self.convolutional_layers = nn.Sequential(
             OrderedDict(
                 [
@@ -171,8 +170,6 @@ class Conv_TransMCA_GEP(nn.Module):
 
         smiles_hidden_sizes = ([params['smiles_embedding_size']] +
                                [params['smiles_embedding_size']] + self.filters)
-
-
 
         self.molecule_attention_layers_gep = nn.Sequential(OrderedDict([
             (
