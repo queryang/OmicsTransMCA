@@ -297,14 +297,14 @@ if __name__ == "__main__":
 
     train_sensitivity_filepath = 'data/drug_sensitivity_MixedSet_train.csv'
     test_sensitivity_filepath = 'data/drug_sensitivity_MixedSet_test.csv'
-    gep_filepath = 'data/OmicsExpressionProteinCodingGenesTPMLogp1-23Q2_Only_MEDICUS_GSVA.csv'
+    gep_filepath = 'data/GeneExp_Wilcoxon_test_Analysis_Log10_P_value_C2_KEGG_MEDICUS.csv'
     cnv_filepath = 'data/CNV_Cardinality_analysis_of_variance_Latest_MEDICUS.csv'
     smi_filepath = 'data/ccle-gdsc.smi'
     gene_filepath = 'data/MUDICUS_Omic_619_pathways.pkl'
     smiles_language_filepath = 'data/smiles_language/tokenizer_customized'
     model_path = 'result/model'
     params_filepath = 'data/params/TransMCA_Dense_GEP_CNV.json'
-    training_name = 'TRANS_MCA_GEP_CNV(Cardinality_Analysis)_MEDICUS619_Clipping'
+    training_name = 'TRANS_MCA_GEP(Log10_P_value)_CNV(Cardinality_Analysis)_MEDICUS619'
     # run the training
     main(
         train_sensitivity_filepath,
