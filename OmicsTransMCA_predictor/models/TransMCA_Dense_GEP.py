@@ -150,6 +150,7 @@ class Conv_TransMCA_GEP(nn.Module):
         encoder = nn.TransformerEncoderLayer(d_model=self.params['smiles_embedding_size'], nhead=self.n_heads, dropout=self.dropout, batch_first=True)
         self.transformer_encoder = nn.TransformerEncoder(encoder, self.num_layers)
 
+        # SMILES Convolutions 对SMILES进行卷积操作
         self.convolutional_layers = nn.Sequential(
             OrderedDict(
                 [
@@ -171,6 +172,7 @@ class Conv_TransMCA_GEP(nn.Module):
         smiles_hidden_sizes = ([params['smiles_embedding_size']] +
                                [params['smiles_embedding_size']] + self.filters)
 
+        # Molecule attention stream 药物 × 基因表达 -> 药物高级特征
         self.molecule_attention_layers_gep = nn.Sequential(OrderedDict([
             (
                 f'molecule_gep_attention_{layer}_head_{head}',
@@ -189,7 +191,7 @@ class Conv_TransMCA_GEP(nn.Module):
             for head in range(self.molecule_gep_heads[layer])
         ]))  # yapf: disable
 
-        # Gene attention stream
+        # Gene attention stream 基因表达 × 药物 -> 基因表达高级特征
         self.gene_attention_layers = nn.Sequential(OrderedDict([
             (
                 f'gene_attention_{layer}_head_{head}',
@@ -208,7 +210,7 @@ class Conv_TransMCA_GEP(nn.Module):
             for head in range(self.gene_heads[layer])
         ]))  # yapf: disable
 
-        # Omics dense stream
+        # Omics dense stream 降维 619 -> 64
         # GEP
         self.gep_dense_layers = nn.Sequential(OrderedDict([
             (
@@ -276,7 +278,7 @@ class Conv_TransMCA_GEP(nn.Module):
         # Transformer Encoder
         trans_smiles = self.transformer_encoder(embedded_smiles)
 
-        # SMILES Convolutions. Unsqueeze has shape bs x 1 x T x H.
+        # SMILES Convolutions. Unsqueeze has shape bs x 1 x T x H. 共五个药物尺度
         encoded_smiles = [embedded_smiles] + [trans_smiles] + [
             self.convolutional_layers[ind]
             (torch.unsqueeze(embedded_smiles, 1)).permute(0, 2, 1)
