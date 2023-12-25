@@ -297,7 +297,7 @@ if __name__ == "__main__":
 
     train_sensitivity_filepath = 'data/drug_sensitivity_MixedSet_train.csv'
     test_sensitivity_filepath = 'data/drug_sensitivity_MixedSet_test.csv'
-    gep_filepath = 'data/OmicsExpressionProteinCodingGenesTPMLogp1-23Q2_Only_MEDICUS_GSVA.csv'
+    gep_filepath = 'data/GeneExp_Wilcoxon_test_Analysis_Log10_P_value_C2_KEGG_MEDICUS.csv'
     cnv_filepath = 'data/CNV_Cardinality_analysis_of_variance_Latest_MEDICUS.csv'
     smi_filepath = 'data/ccle-gdsc.smi'
     gene_filepath = 'data/MUDICUS_Omic_619_pathways.pkl'
