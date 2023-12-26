@@ -193,7 +193,7 @@ def main(
             optimizer.zero_grad()
             loss.backward()
             # Apply gradient clipping
-            # torch.nn.utils.clip_grad_norm_(model.parameters(),1e-6)
+            torch.nn.utils.clip_grad_norm_(model.parameters(),1e-6)
             optimizer.step()
             train_loss += loss.item()
 
@@ -309,7 +309,7 @@ if __name__ == "__main__":
     smiles_language_filepath = 'data/smiles_language/tokenizer_customized'
     model_path = 'result/model'
     params_filepath = 'data/params/MCA_Dense_GEP_CNV_MUT.json'
-    training_name = 'MCA_Dense_GEP_CNV(Cardinality_Analysis)_MUT_MEDICUS619'
+    training_name = 'MCA_Dense_GEP_CNV(Cardinality_Analysis)_MUT_MEDICUS619_1024_Clipping'
     # run the training
     main(
         train_sensitivity_filepath,

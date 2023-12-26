@@ -146,9 +146,12 @@ class Conv_TransMCA_GEP(nn.Module):
             scale_grad_by_freq=params.get('embed_scale_grad', False)
         )
 
-        # Transformer Encoder
+        # Transformer Encoder 给药物进行transformer编码 -> 每个药物分子学习整体药物特征
         encoder = nn.TransformerEncoderLayer(d_model=self.params['smiles_embedding_size'], nhead=self.n_heads, dropout=self.dropout, batch_first=True)
         self.transformer_encoder = nn.TransformerEncoder(encoder, self.num_layers)
+
+        # 使用transformer进行编码的原因：每个药物分子学习整体药物分子特征；
+        # 原作者使用不同步长的卷积，学习不同步长的化学结构信息；我们使用transformer进行编码
 
         # SMILES Convolutions 对SMILES进行卷积操作
         self.convolutional_layers = nn.Sequential(
