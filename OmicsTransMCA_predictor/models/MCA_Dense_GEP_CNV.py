@@ -346,7 +346,7 @@ class MCA_OmicsDense_GEP_CNV(nn.Module):
                     encoded_smiles[layer], cnv
                 )
                 encodings.append(e)
-                # smiles_alphas_cnv.append(a)
+                smiles_alphas_cnv.append(a)
 
         # Gene context attention
         for layer in range(len(self.gene_heads)):
@@ -371,7 +371,7 @@ class MCA_OmicsDense_GEP_CNV(nn.Module):
                 # TODO: 加入Dense层提取特征（降维）
                 e = self.cnv_dense_layers[ind](e)
                 encodings.append(e)
-                # cnv_alphas.append(a)
+                cnv_alphas.append(a)
 
         encodings = torch.cat(encodings, dim=1)
 
@@ -388,15 +388,23 @@ class MCA_OmicsDense_GEP_CNV(nn.Module):
 
         if not self.training:
             # The below is to ease postprocessing
-            smiles_attention = torch.cat(
+            smiles_attention_gep = torch.cat(
                 [torch.unsqueeze(p, -1) for p in smiles_alphas_gep], dim=-1
             )
             gene_attention = torch.cat(
                 [torch.unsqueeze(p, -1) for p in gene_alphas], dim=-1
             )
+            smiles_attention_cnv = torch.cat(
+                [torch.unsqueeze(p, -1) for p in smiles_alphas_cnv], dim=-1
+            )
+            cnv_attention = torch.cat(
+                [torch.unsqueeze(p, -1) for p in cnv_alphas], dim=-1
+            )
             prediction_dict.update({
                 'gene_attention': gene_attention,
-                'smiles_attention': smiles_attention,
+                'smiles_attention_gep': smiles_attention_gep,
+                'cnv_attention': cnv_attention,
+                'smiles_attention_cnv': smiles_attention_cnv,
                 'IC50': predictions,
                 'log_micromolar_IC50':
                     get_log_molar(

@@ -320,7 +320,7 @@ class MCA_GEP_MUT(nn.Module):
                     encoded_smiles[layer], mut
                 )
                 encodings.append(e)
-                # smiles_alphas_mut.append(a)
+                smiles_alphas_mut.append(a)
 
         # Gene context attention
         for layer in range(len(self.gene_heads)):
@@ -341,7 +341,7 @@ class MCA_GEP_MUT(nn.Module):
                     mut, encoded_smiles[layer], average_seq=False
                 )
                 encodings.append(e)
-                # mut_alphas.append(a)
+                mut_alphas.append(a)
 
         encodings = torch.cat(encodings, dim=1)
 
@@ -358,15 +358,31 @@ class MCA_GEP_MUT(nn.Module):
 
         if not self.training:
             # The below is to ease postprocessing
-            smiles_attention = torch.cat(
+            smiles_attention_gep = torch.cat(
                 [torch.unsqueeze(p, -1) for p in smiles_alphas_gep], dim=-1
+            )
+            smiles_attention_cnv = torch.cat(
+                [torch.unsqueeze(p, -1) for p in smiles_alphas_cnv], dim=-1
+            )
+            smiles_attention_mut = torch.cat(
+                [torch.unsqueeze(p, -1) for p in smiles_alphas_mut], dim=-1
             )
             gene_attention = torch.cat(
                 [torch.unsqueeze(p, -1) for p in gene_alphas], dim=-1
             )
+            cnv_attention = torch.cat(
+                [torch.unsqueeze(p, -1) for p in cnv_alphas], dim=-1
+            )
+            mut_attention = torch.cat(
+                [torch.unsqueeze(p, -1) for p in mut_alphas], dim=-1
+            )
             prediction_dict.update({
                 'gene_attention': gene_attention,
-                'smiles_attention': smiles_attention,
+                'cnv_attention': cnv_attention,
+                'mut_attention': mut_attention,
+                'smiles_attention_gep': smiles_attention_gep,
+                'smiles_attention_cnv': smiles_attention_cnv,
+                'smiles_attention_mut': smiles_attention_mut,
                 'IC50': predictions,
                 'log_micromolar_IC50':
                     get_log_molar(

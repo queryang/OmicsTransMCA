@@ -289,8 +289,7 @@ class Conv_TransMCA_GEP(nn.Module):
         ]
 
         # Molecule context attention
-        (encodings, smiles_alphas_gep, smiles_alphas_cnv,
-         smiles_alphas_mut, gene_alphas, cnv_alphas, mut_alphas) = [], [], [], [], [], [], []
+        (encodings, smiles_alphas_gep, gene_alphas) = [], [], []
         for layer in range(len(self.molecule_gep_heads)):
             for head in range(self.molecule_gep_heads[layer]):
                 ind = self.molecule_gep_heads[0] * layer + head
@@ -328,7 +327,7 @@ class Conv_TransMCA_GEP(nn.Module):
 
         if not self.training:
             # The below is to ease postprocessing
-            smiles_attention = torch.cat(
+            smiles_attention_gep = torch.cat(
                 [torch.unsqueeze(p, -1) for p in smiles_alphas_gep], dim=-1
             )
             gene_attention = torch.cat(
@@ -336,7 +335,7 @@ class Conv_TransMCA_GEP(nn.Module):
             )
             prediction_dict.update({
                 'gene_attention': gene_attention,
-                'smiles_attention': smiles_attention,
+                'smiles_attention_gep': smiles_attention_gep,
                 'IC50': predictions,
                 'log_micromolar_IC50':
                     get_log_molar(

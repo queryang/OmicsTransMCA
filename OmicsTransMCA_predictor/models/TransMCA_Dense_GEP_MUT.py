@@ -361,7 +361,7 @@ class Conv_TransMCA_GEP_MUT(nn.Module):
                     encoded_smiles[layer], mut
                 )
                 encodings.append(e)
-                # smiles_alphas_cnv.append(a)
+                smiles_alphas_mut.append(a)
 
         # Gene context attention
         for layer in range(len(self.gene_heads)):
@@ -386,7 +386,7 @@ class Conv_TransMCA_GEP_MUT(nn.Module):
                 # TODO: 加入Dense层提取特征（降维）
                 e = self.mut_dense_layers[ind](e)
                 encodings.append(e)
-                # cnv_alphas.append(a)
+                mut_alphas.append(a)
 
         encodings = torch.cat(encodings, dim=1)
 
@@ -403,15 +403,23 @@ class Conv_TransMCA_GEP_MUT(nn.Module):
 
         if not self.training:
             # The below is to ease postprocessing
-            smiles_attention = torch.cat(
+            smiles_attention_gep = torch.cat(
                 [torch.unsqueeze(p, -1) for p in smiles_alphas_gep], dim=-1
             )
             gene_attention = torch.cat(
                 [torch.unsqueeze(p, -1) for p in gene_alphas], dim=-1
             )
+            smiles_attention_mut = torch.cat(
+                [torch.unsqueeze(p, -1) for p in smiles_alphas_mut], dim=-1
+            )
+            mut_attention = torch.cat(
+                [torch.unsqueeze(p, -1) for p in mut_alphas], dim=-1
+            )
             prediction_dict.update({
                 'gene_attention': gene_attention,
-                'smiles_attention': smiles_attention,
+                'smiles_attention_gep': smiles_attention_gep,
+                'smiles_attention_mut': smiles_attention_mut,
+                'mut_attention': mut_attention,
                 'IC50': predictions,
                 'log_micromolar_IC50':
                     get_log_molar(
@@ -420,33 +428,6 @@ class Conv_TransMCA_GEP_MUT(nn.Module):
                         ic50_min=self.IC50_min
                     ) if self.min_max_scaling else predictions
             })  # yapf: disable
-
-            if confidence:
-                augmenter = AugmentTensor(self.smiles_language)
-                epi_conf, epi_pred = monte_carlo_dropout(
-                    self,
-                    regime='tensors',
-                    tensors=(smiles, omics),
-                    repetitions=5
-                )
-                ale_conf, ale_pred = test_time_augmentation(
-                    self,
-                    regime='tensors',
-                    tensors=(smiles, omics),
-                    repetitions=5,
-                    augmenter=augmenter,
-                    tensors_to_augment=0
-                )
-
-                prediction_dict.update({
-                    'epistemic_confidence': epi_conf,
-                    'epistemic_predictions': epi_pred,
-                    'aleatoric_confidence': ale_conf,
-                    'aleatoric_predictions': ale_pred
-                })  # yapf: disable
-
-        elif confidence:
-            logger.info('Using confidence in training mode is not supported.')
 
         return predictions, prediction_dict
 
