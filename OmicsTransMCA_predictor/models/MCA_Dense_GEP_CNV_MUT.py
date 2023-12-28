@@ -405,7 +405,7 @@ class MCA_OmicsDense_GEP_CNV_MUT(nn.Module):
                     encoded_smiles[layer], cnv
                 )
                 encodings.append(e)
-                # smiles_alphas_cnv.append(a)
+                smiles_alphas_cnv.append(a)
 
         for layer in range(len(self.molecule_mut_heads)):
             for head in range(self.molecule_mut_heads[layer]):
@@ -414,7 +414,7 @@ class MCA_OmicsDense_GEP_CNV_MUT(nn.Module):
                     encoded_smiles[layer], mut
                 )
                 encodings.append(e)
-                # smiles_alphas_mut.append(a)
+                smiles_alphas_mut.append(a)
 
         # Gene context attention
         for layer in range(len(self.gene_heads)):
