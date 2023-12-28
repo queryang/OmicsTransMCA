@@ -5,7 +5,7 @@
     "number_of_genes": 619,
     "smiles_padding_length": 256,
     "stacked_dense_hidden_sizes": [
-        1024,
+        1536,
         512,
         128
     ],
