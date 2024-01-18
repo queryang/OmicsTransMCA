@@ -7,14 +7,12 @@ from copy import deepcopy
 from time import time
 import numpy as np
 import torch
+from pytoda.smiles.smiles_language import SMILESTokenizer
 from OmicsTransMCA_predictor.models import MODEL_FACTORY
 from OmicsTransMCA_predictor.utils.hyperparams import OPTIMIZER_FACTORY
 from OmicsTransMCA_predictor.utils.loss_functions import pearsonr, r2_score
 from OmicsTransMCA_predictor.utils.utils import get_device, get_log_molar
-from pytoda.smiles.smiles_language import SMILESTokenizer
-
 from model_omics_experiment.tools.OmicsDrugSensitivityDataset_GEP_CNV_MUT import OmicsDrugSensitivityDataset_GEP_CNV_MUT
-
 
 def main(
     train_sensitivity_filepath,
@@ -141,9 +139,10 @@ def main(
             "gene_expression_processing_parameters": {},
         }
     )
-    model_name = params.get("model_fn", "mca_dense_GEP_CNV_MUT")
+    model_name = params.get("model_fn", "trans_mca_dense_GEP_CNV_MUT_V2")
     model = MODEL_FACTORY[model_name](params).to(device)
     model._associate_language(smiles_language)
+
 
     if os.path.isfile(os.path.join(model_dir, "weights", f"best_mse_{model_name}.pt")):
         print("Found existing model, restoring now...")
@@ -299,8 +298,8 @@ def main(
 
 if __name__ == "__main__":
 
-    train_sensitivity_filepath = 'data/drug_sensitivity_CellBlind_train.csv'
-    test_sensitivity_filepath = 'data/drug_sensitivity_CellBlind_test.csv'
+    train_sensitivity_filepath = 'data/drug_sensitivity_MixedSet_train.csv'
+    test_sensitivity_filepath = 'data/drug_sensitivity_MixedSet_test.csv'
     gep_filepath = 'data/GeneExp_Wilcoxon_test_Analysis_Log10_P_value_C2_KEGG_MEDICUS.csv'
     cnv_filepath = 'data/CNV_Cardinality_analysis_of_variance_Latest_MEDICUS.csv'
     mut_filepath = 'data/MUT_cardinality_analysis_of_variance_Only_MEDICUS.csv'
@@ -308,8 +307,8 @@ if __name__ == "__main__":
     gene_filepath = 'data/MUDICUS_Omic_619_pathways.pkl'
     smiles_language_filepath = 'data/smiles_language/tokenizer_customized'
     model_path = 'result/model'
-    params_filepath = 'data/params/MCA_Dense_GEP_CNV_MUT.json'
-    training_name = 'MCA_Dense_GEP_CNV(Cardinality_Analysis)_MUT_MEDICUS619_1536_Clipping_CellBlind'
+    params_filepath = 'data/params/TransMCA_Dense_GEP_CNV_MUT_V2.json'
+    training_name = 'TRANS_MCA_GEP_CNV_MUT_V2_MEDICUS619_1536_Clipping'
     # run the training
     main(
         train_sensitivity_filepath,

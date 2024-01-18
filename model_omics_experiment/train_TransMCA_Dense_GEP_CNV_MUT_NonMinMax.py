@@ -7,14 +7,12 @@ from copy import deepcopy
 from time import time
 import numpy as np
 import torch
+from pytoda.smiles.smiles_language import SMILESTokenizer
 from OmicsTransMCA_predictor.models import MODEL_FACTORY
 from OmicsTransMCA_predictor.utils.hyperparams import OPTIMIZER_FACTORY
 from OmicsTransMCA_predictor.utils.loss_functions import pearsonr, r2_score
 from OmicsTransMCA_predictor.utils.utils import get_device, get_log_molar
-from pytoda.smiles.smiles_language import SMILESTokenizer
-
 from model_omics_experiment.tools.OmicsDrugSensitivityDataset_GEP_CNV_MUT import OmicsDrugSensitivityDataset_GEP_CNV_MUT
-
 
 def main(
     train_sensitivity_filepath,
@@ -116,8 +114,7 @@ def main(
         drug_sensitivity_min_max=params.get("drug_sensitivity_min_max", True),
         iterate_dataset=False,
     )
-    min_value = test_dataset.drug_sensitivity_processing_parameters['parameters']['min']
-    max_value = test_dataset.drug_sensitivity_processing_parameters['parameters']['max']
+
     test_loader = torch.utils.data.DataLoader(
         dataset=test_dataset,
         batch_size=params["batch_size"],
@@ -141,9 +138,10 @@ def main(
             "gene_expression_processing_parameters": {},
         }
     )
-    model_name = params.get("model_fn", "mca_dense_GEP_CNV_MUT")
+    model_name = params.get("model_fn", "trans_mca_dense_GEP_CNV_MUT")
     model = MODEL_FACTORY[model_name](params).to(device)
     model._associate_language(smiles_language)
+
 
     if os.path.isfile(os.path.join(model_dir, "weights", f"best_mse_{model_name}.pt")):
         print("Found existing model, restoring now...")
@@ -217,13 +215,9 @@ def main(
                 y_hat, pred_dict = model(
                     torch.squeeze(smiles.to(device)), gep.to(device), cnv.to(device), mut.to(device)
                 )
-                log_pre = pred_dict.get("log_micromolar_IC50")
-                log_pres.append(log_pre)
-                # predictions.append(y_hat)
-                log_y = get_log_molar(y, ic50_max=max_value, ic50_min=min_value)
-                log_labels.append(log_y)
-                # labels.append(y)
-                loss = model.loss(log_pre, log_y.to(device))
+                log_pres.append(y_hat)
+                log_labels.append(y)
+                loss = model.loss(y_hat, y.to(device))
                 test_loss += loss.item()
 
         # on the logIC50 scale
@@ -283,6 +277,7 @@ def main(
             info = update_info()
             save(save_top_model, "r2", "best", max_r2)
             ep_r2 = epoch
+        # 按轮次保存模型
         if (epoch + 1) % params.get("save_model", 100) == 0:
             save(save_top_model, "epoch", str(epoch))
     print(
@@ -299,8 +294,8 @@ def main(
 
 if __name__ == "__main__":
 
-    train_sensitivity_filepath = 'data/drug_sensitivity_CellBlind_train.csv'
-    test_sensitivity_filepath = 'data/drug_sensitivity_CellBlind_test.csv'
+    train_sensitivity_filepath = 'data/drug_sensitivity_MixedSet_train.csv'
+    test_sensitivity_filepath = 'data/drug_sensitivity_MixedSet_test.csv'
     gep_filepath = 'data/GeneExp_Wilcoxon_test_Analysis_Log10_P_value_C2_KEGG_MEDICUS.csv'
     cnv_filepath = 'data/CNV_Cardinality_analysis_of_variance_Latest_MEDICUS.csv'
     mut_filepath = 'data/MUT_cardinality_analysis_of_variance_Only_MEDICUS.csv'
@@ -308,8 +303,8 @@ if __name__ == "__main__":
     gene_filepath = 'data/MUDICUS_Omic_619_pathways.pkl'
     smiles_language_filepath = 'data/smiles_language/tokenizer_customized'
     model_path = 'result/model'
-    params_filepath = 'data/params/MCA_Dense_GEP_CNV_MUT.json'
-    training_name = 'MCA_Dense_GEP_CNV(Cardinality_Analysis)_MUT_MEDICUS619_1536_Clipping_CellBlind'
+    params_filepath = 'data/params/TransMCA_Dense_GEP_CNV_MUT_NonMinMax.json'
+    training_name = 'TRANS_MCA_GEP_CNV_MUT_NonMinMax_MEDICUS619_1536_Clipping'
     # run the training
     main(
         train_sensitivity_filepath,

@@ -2,7 +2,7 @@
     "drug_sensitivity_min_max": true,
     "augment_smiles": true,
     "smiles_start_stop_token": true,
-    "number_of_genes": 1857,
+    "number_of_genes": 619,
     "smiles_padding_length": 256,
     "stacked_dense_hidden_sizes": [
         1536,
@@ -81,8 +81,8 @@
     "loss_fn": "mse",
     "epochs": 200,
     "save_model": 25,
-    "num_workers": 4,
-    "n_heads": 8,
+    "num_workers": 0,
+    "n_heads": 2,
     "num_layers": 4,
     "omics_dense_size": 64,
     "dataset_device": "cpu"
