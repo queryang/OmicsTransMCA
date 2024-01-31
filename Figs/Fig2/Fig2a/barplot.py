@@ -24,11 +24,27 @@ plt.rcParams['axes.unicode_minus'] = False
 palette = {'LUAD':'#b9f2f0',
            'LCLC':'#d0bbff',
            'NSCLC':'#ff9f9b',
-           'LUSC':'#66c2a5',
-           'SCLC':'#a6d854'}
-bar_plot = sns.barplot(x="cell_line",y="Pearson",hue="OncotreeCode",data=df_data,palette=palette,edgecolor='black')
+           'LUSC':'#a6d854',
+           'SCLC':'#66c2a5'}
+bar_plot = sns.barplot(x="cell_line",y="Pearson",hue="OncotreeCode",data=df_data,
+                       palette=palette, edgecolor='black', width=0.6)
 # 设置x轴标签倾斜45度
 plt.xticks(rotation=45)
 bar_plot.legend(loc='center left', bbox_to_anchor=(1, 0.5), title='Subtype')
+# 设置y轴名称：Correlation of predicted drug IC50 values with groud truth
+plt.ylabel("Pearson Correlation",fontsize=12)
+# xlabel fontsize=12
+plt.xlabel("Cell lines",fontsize=12)
 
+# Get the current axes, creating one if necessary.
+ax = plt.gca()
+# Set the spines (the box) visibility
+ax.spines['top'].set_visible(False)
+ax.spines['right'].set_visible(False)
+ax.spines['bottom'].set_linewidth(2)  # X轴线宽
+ax.spines['left'].set_linewidth(2)  # Y轴线宽
+
+
+plt.tight_layout()
+plt.savefig("bar_plot.png",dpi=300, bbox_inches='tight')
 plt.show()

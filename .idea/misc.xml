@@ -3,5 +3,5 @@
   <component name="Black">
     <option name="sdkName" value="torchgpu2" />
   </component>
-  <component name="ProjectRootManager" version="2" project-jdk-name="torchgpu2" project-jdk-type="Python SDK" />
+  <component name="ProjectRootManager" version="2" project-jdk-name="torchgpu1" project-jdk-type="Python SDK" />
 </project>
