@@ -187,15 +187,15 @@ def main(
 
 if __name__ == "__main__":
 
-    test_sensitivity_filepath = '../model_omics_experiment/data/drug_sensitivity_lung_CellBlind_test.csv'
+    test_sensitivity_filepath = '../model_omics_experiment/data/drug_sensitivity_lung_CellBlind_test2.csv'
     gep_filepath = '../model_omics_experiment/data/GeneExp_Wilcoxon_test_Analysis_Log10_P_value_C2_KEGG186.csv'
     cnv_filepath = '../model_omics_experiment/data/CNV_Cardinality_analysis_of_variance_Latest_KEGG186.csv'
     mut_filepath = '../model_omics_experiment/data/MUT_cardinality_analysis_of_variance_KEGG186.csv'
     smi_filepath = '../model_omics_experiment/data/ccle-gdsc.smi'
     gene_filepath = '../model_omics_experiment/data/KEGG_Omic_186_pathways.pkl'
     smiles_language_filepath = '../model_omics_experiment/data/smiles_language/tokenizer_customized'
-    model_path = 'models/TRANS_MCA_GEP_KEGG186_Clipping_CellBlind/weights/best_mse_trans_mca_dense_GEP.pt'
-    params_filepath = 'models/TRANS_MCA_GEP_KEGG186_Clipping_CellBlind/model_params.json'
+    model_path = 'models/TRANS_MCA_GEP_KEGG186_Clipping_CellBlind2/weights/best_mse_trans_mca_dense_GEP.pt'
+    params_filepath = 'models/TRANS_MCA_GEP_KEGG186_Clipping_CellBlind2/model_params.json'
     # training_name = 'TRANS_MCA_GEP(Log10_P_value)_CNV(Cardinality_Analysis)_MUT_MEDICUS619'
     # run the training
     main(

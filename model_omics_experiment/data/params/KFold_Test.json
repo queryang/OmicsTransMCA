@@ -88,7 +88,7 @@
     "epochs": 200,
     "save_model": 25,
     "num_workers": 0,
-    "n_heads": 8,
+    "n_heads": 2,
     "num_layers": 4,
     "omics_dense_size": 64,
     "fold": 5,
