@@ -308,7 +308,7 @@ class MCA_GEP(nn.Module):
             )
             prediction_dict.update({
                 'gene_attention': gene_attention,
-                'smiles_attention': smiles_attention,
+                'smiles_attention_gep': smiles_attention,
                 'IC50': predictions,
                 'log_micromolar_IC50':
                     get_log_molar(

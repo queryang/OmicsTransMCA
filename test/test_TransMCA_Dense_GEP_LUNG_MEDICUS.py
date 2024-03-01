@@ -104,7 +104,7 @@ def main(
         f'model is {device}'
     )
 
-    model_name = params.get("model_fn", "trans_mca_dense_GEP")
+    model_name = params.get("model_fn", "mca_GEP")
     model = MODEL_FACTORY[model_name](params).to(device)
     model._associate_language(smiles_language)
 
@@ -182,8 +182,8 @@ def main(
     gene_attentions = pd.DataFrame(gene_attentions)
     smiles_attentions_geps = pd.DataFrame(smiles_attentions_geps)
 
-    gene_attentions.to_csv('attention_result/GEP_CellBlind_LUNG_gene_attention.csv',index=False)
-    smiles_attentions_geps.to_csv('attention_result/GEP_CellBlind_LUNG_smiles_attentions_gep.csv',index=False)
+    gene_attentions.to_csv('attention_result/GEP_CellBlind_LUNG_gene_attention2.csv',index=False)
+    smiles_attentions_geps.to_csv('attention_result/GEP_CellBlind_LUNG_smiles_attentions_gep2.csv',index=False)
 
 if __name__ == "__main__":
 
@@ -194,8 +194,8 @@ if __name__ == "__main__":
     smi_filepath = '../model_omics_experiment/data/ccle-gdsc.smi'
     gene_filepath = '../model_omics_experiment/data/MUDICUS_Omic_619_pathways.pkl'
     smiles_language_filepath = '../model_omics_experiment/data/smiles_language/tokenizer_customized'
-    model_path = 'models/TRANS_MCA_GEP_MEDICUS619_CellBlind_LUNG/weights/best_mse_trans_mca_dense_GEP.pt'
-    params_filepath = 'models/TRANS_MCA_GEP_MEDICUS619_CellBlind_LUNG/model_params.json'
+    model_path = 'models/MCA_GEP_MEDICUS_CellBlind_LUNG/weights/best_mse_mca_GEP.pt'
+    params_filepath = 'models/MCA_GEP_MEDICUS_CellBlind_LUNG/model_params.json'
     # training_name = 'TRANS_MCA_GEP(Log10_P_value)_CNV(Cardinality_Analysis)_MUT_MEDICUS619'
     # run the training
     main(

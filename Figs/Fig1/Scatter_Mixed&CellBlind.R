@@ -3,7 +3,7 @@ library(caret)
 library(ggpubr)
 setwd('D:\\WuYang\\code space\\python\\paper code\\OmicsTransMCA\\Figs\\Fig1')
 ## 读取csv文件
-pre_labels= read.csv("result/TransMCADense_GEP_CellBlind_predictions&labels.csv", sep=",", header=T, stringsAsFactors = F)
+pre_labels= read.csv("result/svm.csv", sep=",", header=T, stringsAsFactors = F)
 #取第一列为predictions，第二列为labels
 predictions=pre_labels[,1]
 labels=pre_labels[,2]
@@ -32,6 +32,6 @@ g=ggscatter(df, x = "Actual", y = "Predicted",
             add = "reg.line", conf.int = TRUE, 
             cor.coef = FALSE, cor.method = "pearson",color = "density",
             xlab = "Observed GDSC LN IC50", ylab = "Predicted LN IC50",add.params = list(color="black"),cor.coef.size = 20)
-g+  scale_colour_gradientn(colours = terrain.colors(10))+theme_classic() +theme(axis.text=element_text(size=20))
+rg+  scale_colour_gradientn(colours = terrain.colors(10))+theme_classic() +theme(axis.text=element_text(size=20))
 
 
