@@ -89,7 +89,7 @@
     "save_model": 25,
     "num_workers": 4,
     "n_heads": 2,
-    "num_layers": 4,
+    "num_layers": 2,
     "omics_dense_size": 64,
     "fold": 10,
     "dataset_device": "cpu"

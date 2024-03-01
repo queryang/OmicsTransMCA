@@ -36,9 +36,9 @@ def main(
         params.update(json.load(fp))
         params.update(
             {
-                "batch_size": 64,
-                "epochs": 50,
-                "num_workers": 0,
+                "batch_size": 512,
+                "epochs": 100,
+                "num_workers": 4,
             }
         )
     print(params)
@@ -97,8 +97,9 @@ def main(
             json.dump(params, fp, indent=4)
 
         # load the drug sensitivity data
+        drug_sensitivity_train = drug_sensitivity_filepath + 'train_Fold' + str(fold) + '.csv'
         train_dataset = OmicsDrugSensitivityDataset_GEP_CNV(
-            drug_sensitivity_filepath=drug_sensitivity_filepath + 'train_Fold' + str(fold) + '.csv',
+            drug_sensitivity_filepath=drug_sensitivity_train,
             smiles_filepath=smi_filepath,
             gep_filepath=omic1,
             cnv_filepath=omic2,
@@ -115,8 +116,9 @@ def main(
             drop_last=True,
             num_workers=params.get("num_workers", 4),
         )
+        drug_sensitivity_test = drug_sensitivity_filepath + 'test_Fold' + str(fold) + '.csv'
         test_dataset = OmicsDrugSensitivityDataset_GEP_CNV(
-            drug_sensitivity_filepath=drug_sensitivity_filepath + 'test_Fold' + str(fold) + '.csv',
+            drug_sensitivity_filepath=drug_sensitivity_test,
             smiles_filepath=smi_filepath,
             gep_filepath=omic1,
             cnv_filepath=omic2,
@@ -176,7 +178,7 @@ def main(
         for epoch in range(params["epochs"]):
 
             print(params_filepath.split("/")[-1])
-            print(f"== Fold [{fold+1}/{params['fold']}] Epoch [{epoch}/{params['epochs']}] ==")
+            print(f"== Fold [{fold+1}/{params['fold']}] Epoch [{epoch+1}/{params['epochs']}] ==")
 
             training(model, device, epoch, fold, train_loader, optimizer, params, t)
 
@@ -186,7 +188,7 @@ def main(
                 evaluation(model, device, test_loader, params, epoch, fold, max_value, min_value))
 
             def save(path, metric, typ, val=None):
-                fold_info = "Fold_" + (fold+1)
+                fold_info = "Fold_" + str(fold+1)
                 model.save(path.format(fold_info + typ, metric, model_name))
                 with open(os.path.join(model_dir, "results", fold_info + metric + ".json"), "w") as f:
                     json.dump(info, f)
@@ -291,11 +293,11 @@ def evaluation(model, device, test_loader, params, epoch, fold, max_value, min_v
     test_loss_a = test_loss / len(test_loader)
     test_r2_a = r2_score(torch.Tensor(predictions), torch.Tensor(labels))
     print(
-        f"\t **** Evaluation **** Fold [{fold+1}]   Epoch [{epoch + 1}/{params['epochs']}], "
+        f"\t **** Test **** Fold [{fold+1}]   Epoch [{epoch + 1}/{params['epochs']}], "
         f"loss: {test_loss_a:.5f}, "
-        f"Pearson: {test_pearson_a:.3f}, "
-        f"RMSE: {test_rmse_a:.3f}, "
-        f"R2: {test_r2_a:.3f}. "
+        f"Pearson: {test_pearson_a:.4f}, "
+        f"RMSE: {test_rmse_a:.4f}, "
+        f"R2: {test_r2_a:.4f}. "
     )
     return test_loss_a, test_pearson_a, test_rmse_a, test_r2_a, predictions, labels
 
