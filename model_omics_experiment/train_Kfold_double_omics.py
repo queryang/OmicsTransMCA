@@ -14,7 +14,6 @@ from OmicsTransMCA_predictor.models import MODEL_FACTORY
 from OmicsTransMCA_predictor.utils.hyperparams import OPTIMIZER_FACTORY
 from OmicsTransMCA_predictor.utils.loss_functions import pearsonr, r2_score
 from OmicsTransMCA_predictor.utils.utils import get_device, get_log_molar
-from sklearn.model_selection import KFold
 from pytoda.smiles.smiles_language import SMILESTokenizer
 
 def main(
@@ -37,7 +36,7 @@ def main(
         params.update(
             {
                 "batch_size": 512,
-                "epochs": 100,
+                "epochs": 200,
                 "num_workers": 4,
             }
         )
@@ -83,7 +82,7 @@ def main(
 
     #===================================================
     # 设置交叉验证折数
-    n_folds = params.get("fold", 10)
+    n_folds = params.get("fold", 11)
     #===================================================
 
     # for 循环10次
@@ -184,7 +183,7 @@ def main(
 
             t = time()
 
-            test_pearson_a, test_rmse_a, test_loss_a, test_r2_a, predictions, labels = (
+            test_loss_a, test_pearson_a, test_rmse_a, test_r2_a, predictions, labels = (
                 evaluation(model, device, test_loader, params, epoch, fold, max_value, min_value))
 
             def save(path, metric, typ, val=None):
@@ -258,8 +257,8 @@ def training(model, device, epoch, fold, train_loader, optimizer, params, t):
         optimizer.step()
         train_loss += loss.item()
     print(
-        "\t **** TRAINING ****   "
-        f"Fold [{fold+1}] Epoch [{epoch + 1}/{params['epochs']}], "
+        "\t **** TRAINING ****  "
+        f"Fold[{fold+1}] Epoch [{epoch + 1}/{params['epochs']}], "
         f"loss: {train_loss / len(train_loader):.5f}. "
         f"This took {time() - t:.1f} secs."
     )
@@ -293,7 +292,7 @@ def evaluation(model, device, test_loader, params, epoch, fold, max_value, min_v
     test_loss_a = test_loss / len(test_loader)
     test_r2_a = r2_score(torch.Tensor(predictions), torch.Tensor(labels))
     print(
-        f"\t **** Test **** Fold [{fold+1}]   Epoch [{epoch + 1}/{params['epochs']}], "
+        f"\t ****   Test   ****  Fold[{fold+1}] Epoch [{epoch + 1}/{params['epochs']}], "
         f"loss: {test_loss_a:.5f}, "
         f"Pearson: {test_pearson_a:.4f}, "
         f"RMSE: {test_rmse_a:.4f}, "
@@ -315,7 +314,7 @@ if __name__ == "__main__":
     smiles_language_filepath = 'data/smiles_language/tokenizer_customized'
     model_path = 'result/model'
     params_filepath = 'data/params/KFold_Test.json'
-    training_name = 'train_MixedSet_10Fold_GEP_CNV'
+    training_name = 'train_MixedSet_11Fold_GEP_CNV'
     # run the training
     main(
         drug_sensitivity_filepath,

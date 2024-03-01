@@ -14,7 +14,6 @@ from OmicsTransMCA_predictor.models import MODEL_FACTORY
 from OmicsTransMCA_predictor.utils.hyperparams import OPTIMIZER_FACTORY
 from OmicsTransMCA_predictor.utils.loss_functions import pearsonr, r2_score
 from OmicsTransMCA_predictor.utils.utils import get_device, get_log_molar
-from sklearn.model_selection import KFold
 from pytoda.smiles.smiles_language import SMILESTokenizer
 
 def main(
@@ -36,7 +35,7 @@ def main(
         params.update(
             {
                 "batch_size": 512,
-                "epochs": 100,
+                "epochs": 200,
                 "num_workers": 4,
             }
         )
@@ -65,7 +64,7 @@ def main(
         sanitize=params.get("selfies", False),
     )
     test_smiles_language.set_smiles_transforms(
-        augment=False,
+        augment=params.get("augment_smiles", False),
         canonical=params.get("test_smiles_canonical", False),
         kekulize=params.get("smiles_kekulize", False),
         all_bonds_explicit=params.get("smiles_bonds_explicit", False),
@@ -82,7 +81,7 @@ def main(
 
     #===================================================
     # 设置交叉验证折数
-    n_folds = params.get("fold", 10)
+    n_folds = params.get("fold", 11)
     #===================================================
 
     # for 循环10次
@@ -97,6 +96,7 @@ def main(
 
         # load the drug sensitivity data
         drug_sensitivity_train = drug_sensitivity_filepath + 'train_Fold' + str(fold) + '.csv'
+        print('drug_sensitivity_train_file:',drug_sensitivity_train)
         train_dataset = OmicsDrugSensitivityDataset_GEP(
             drug_sensitivity_filepath=drug_sensitivity_train,
             smiles_filepath=smi_filepath,
@@ -179,7 +179,7 @@ def main(
 
             t = time()
 
-            test_pearson_a, test_rmse_a, test_loss_a, test_r2_a, predictions, labels = (
+            test_loss_a, test_pearson_a, test_rmse_a, test_r2_a, predictions, labels = (
                 evaluation(model, device, test_loader, params, epoch, fold, max_value, min_value))
 
             def save(path, metric, typ, val=None):
@@ -310,7 +310,7 @@ if __name__ == "__main__":
     smiles_language_filepath = 'data/smiles_language/tokenizer_customized'
     model_path = 'result/model'
     params_filepath = 'data/params/KFold_Test.json'
-    training_name = 'train_MixedSet_10Fold_GEP'
+    training_name = 'train_MixedSet_11Fold_GEP'
     # run the training
     main(
         drug_sensitivity_filepath,
