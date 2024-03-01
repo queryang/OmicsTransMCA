@@ -2,10 +2,10 @@
     "drug_sensitivity_min_max": true,
     "augment_smiles": true,
     "smiles_start_stop_token": true,
-    "number_of_genes": 1857,
+    "number_of_genes": 619,
     "smiles_padding_length": 256,
     "stacked_dense_hidden_sizes": [
-        1536,
+        1024,
         512,
         128
     ],
@@ -81,16 +81,16 @@
     "gene_attention_size": 1,
     "embed_scale_grad": false,
     "final_activation": true,
-    "batch_size": 32,
+    "batch_size": 64,
     "lr": 0.001,
     "optimizer": "adam",
     "loss_fn": "mse",
     "epochs": 200,
     "save_model": 25,
-    "num_workers": 0,
+    "num_workers": 4,
     "n_heads": 2,
     "num_layers": 4,
     "omics_dense_size": 64,
-    "fold": 5,
+    "fold": 10,
     "dataset_device": "cpu"
 }

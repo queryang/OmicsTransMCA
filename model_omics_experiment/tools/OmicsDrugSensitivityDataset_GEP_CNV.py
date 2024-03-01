@@ -37,13 +37,8 @@ class OmicsDrugSensitivityDataset_GEP_CNV(Dataset):
                  sanitize: bool = True,
                  vocab_file: str = None,
                  iterate_dataset: bool = True,
-                 k_fold: bool = False,
-                 drug_sensitivity_data: pd.DataFrame = None,
                  ):
-        if k_fold:
-            self.drug_sensitivity = drug_sensitivity_data
-        else:
-            self.drug_sensitivity = pd.read_csv(drug_sensitivity_filepath, index_col=0)
+        self.drug_sensitivity = pd.read_csv(drug_sensitivity_filepath, index_col=0)
         self.smiles = pd.read_csv(smiles_filepath,header=None)
         self.gep_standardize = gep_standardize
         self.cnv_standardize = cnv_standardize

@@ -34,13 +34,14 @@ def main(
     params = {}
     with open(params_filepath) as fp:
         params.update(json.load(fp))
+        params.update(
+            {
+                "batch_size": 64,
+                "epochs": 50,
+                "num_workers": 0,
+            }
+        )
     print(params)
-    # Create model directory and dump files
-    model_dir = os.path.join(model_path, training_name)
-    os.makedirs(os.path.join(model_dir, "weights"), exist_ok=True)
-    os.makedirs(os.path.join(model_dir, "results"), exist_ok=True)
-    with open(os.path.join(model_dir, "model_params.json"), "w") as fp:
-        json.dump(params, fp, indent=4)
 
     # Prepare the dataset
     print("Start data preprocessing...")
@@ -80,123 +81,109 @@ def main(
     with open(gene_filepath, "rb") as f:
         pathway_list = pickle.load(f)
 
-    # load the drug sensitivity data
-    drug_sensitivity_data = pd.read_csv(drug_sensitivity_filepath)
     #===================================================
-    # Mixed Set分割策略
     # 设置交叉验证折数
-    n_splits = 10
-
+    n_folds = params.get("fold", 10)
     #===================================================
 
-    # OmicsDrugSensitivityDataset 重写的数据集class
-    train_dataset = OmicsDrugSensitivityDataset_GEP_CNV(
-        drug_sensitivity_filepath=train_sensitivity_filepath,
-        smiles_filepath=smi_filepath,
-        gep_filepath=omic1,
-        cnv_filepath=omic2,
-        gep_standardize=params.get("gep_standardize", False),
-        cnv_standardize=params.get("cnv_standardize", False),
-        smiles_language=smiles_language,
-        drug_sensitivity_min_max=params.get("drug_sensitivity_min_max", True),
-        iterate_dataset=False,
-    )
+    # for 循环10次
+    for fold in range(n_folds):
+        print(f"============== Fold [{fold+1}/{params['fold']}] ==============")
+        # Create model directory and dump files
+        model_dir = os.path.join(model_path, training_name, 'Fold' + str(fold+1))
+        os.makedirs(os.path.join(model_dir, "weights"), exist_ok=True)
+        os.makedirs(os.path.join(model_dir, "results"), exist_ok=True)
+        with open(os.path.join(model_dir, "model_params.json"), "w") as fp:
+            json.dump(params, fp, indent=4)
 
-    test_dataset = OmicsDrugSensitivityDataset_GEP_CNV(
-        drug_sensitivity_filepath=test_sensitivity_filepath,
-        smiles_filepath=smi_filepath,
-        gep_filepath=omic1,
-        cnv_filepath=omic2,
-        gep_standardize=params.get("gep_standardize", False),
-        cnv_standardize=params.get("cnv_standardize", False),
-        smiles_language=smiles_language,
-        drug_sensitivity_min_max=params.get("drug_sensitivity_min_max", True),
-        iterate_dataset=False,
-    )
-    min_value = test_dataset.drug_sensitivity_processing_parameters['parameters']['min']
-    max_value = test_dataset.drug_sensitivity_processing_parameters['parameters']['max']
-
-    print(
-        f"Training dataset has {len(train_dataset)} samples, test set has "
-        f"{len(test_dataset)}."
-    )
-
-    device = get_device()
-
-    save_top_model = os.path.join(model_dir, "weights/{}_{}_{}.pt")
-    params.update(
-        {  # yapf: disable
-            "number_of_genes": len(pathway_list),
-            "smiles_vocabulary_size": smiles_language.number_of_tokens,
-            "drug_sensitivity_processing_parameters": train_dataset.drug_sensitivity_processing_parameters
-        }
-    )
-
-    model_name = params.get("model_fn", "conv_trans_mca_GEP_CNV")
-    model = MODEL_FACTORY[model_name](params).to(device)
-    model._associate_language(smiles_language)
-
-    # 不加载模型了
-    min_loss, min_rmse, max_pearson, max_r2 = 100, 1000, 0, 0
-
-    # Define optimizer
-    optimizer = OPTIMIZER_FACTORY[params.get("optimizer", "Adam")](
-        model.parameters(), lr=params.get("lr", 0.001)
-    )
-
-    num_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
-    params.update({"number_of_parameters": num_params})
-    print(f"Number of parameters {num_params}")
-
-    # Overwrite params.json file with updated parameters.
-    with open(os.path.join(model_dir, "model_params.json"), "w") as fp:
-        json.dump(params, fp)
-
-    # Start training
-    print("Training about to start...\n")
-    t = time()
-
-
-    kf = KFold(n_splits=params['fold'], shuffle=True, random_state=42)
-    for fold, (train_idx, val_idx) in enumerate(kf.split(train_dataset)):
-        print(f"======== Fold [{fold+1}/{params['fold']}] ========")
-        # 分割训练集和验证集
-        train_subsampler = torch.utils.data.SubsetRandomSampler(train_idx)
-        val_subsampler = torch.utils.data.SubsetRandomSampler(val_idx)
-
-        # warning: SubsetRandomSampler 和 shuffle=True 互斥
-        trainloader = torch.utils.data.DataLoader(
-            train_dataset,
+        # load the drug sensitivity data
+        train_dataset = OmicsDrugSensitivityDataset_GEP_CNV(
+            drug_sensitivity_filepath=drug_sensitivity_filepath + 'train_Fold' + str(fold) + '.csv',
+            smiles_filepath=smi_filepath,
+            gep_filepath=omic1,
+            cnv_filepath=omic2,
+            gep_standardize=params.get("gep_standardize", False),
+            cnv_standardize=params.get("cnv_standardize", False),
+            smiles_language=smiles_language,
+            drug_sensitivity_min_max=params.get("drug_sensitivity_min_max", True),
+            iterate_dataset=False,
+        )
+        train_loader = torch.utils.data.DataLoader(
+            dataset=train_dataset,
             batch_size=params["batch_size"],
-            sampler=train_subsampler,
-            num_workers=params.get("num_workers", 4),
+            shuffle=True,
             drop_last=True,
-            # shuffle=True
+            num_workers=params.get("num_workers", 4),
+        )
+        test_dataset = OmicsDrugSensitivityDataset_GEP_CNV(
+            drug_sensitivity_filepath=drug_sensitivity_filepath + 'test_Fold' + str(fold) + '.csv',
+            smiles_filepath=smi_filepath,
+            gep_filepath=omic1,
+            cnv_filepath=omic2,
+            gep_standardize=params.get("gep_standardize", False),
+            cnv_standardize=params.get("cnv_standardize", False),
+            smiles_language=smiles_language,
+            drug_sensitivity_min_max=params.get("drug_sensitivity_min_max", True),
+            iterate_dataset=False,
+        )
+        min_value = test_dataset.drug_sensitivity_processing_parameters['parameters']['min']
+        max_value = test_dataset.drug_sensitivity_processing_parameters['parameters']['max']
+        test_loader = torch.utils.data.DataLoader(
+            dataset=test_dataset,
+            batch_size=params["batch_size"],
+            shuffle=False,
+            drop_last=True,
+            num_workers=params.get("num_workers", 4),
+        )
+        print(
+            f"FOLD [{fold+1}/{params['fold']}]"
+            f"Training dataset has {len(train_dataset)} samples, test set has "
+            f"{len(test_dataset)}."
+        )
+        device = get_device()
+        save_top_model = os.path.join(model_dir, "weights/{}_{}_{}.pt")
+        params.update(
+            {  # yapf: disable
+                "number_of_genes": len(pathway_list),
+                "smiles_vocabulary_size": smiles_language.number_of_tokens,
+                "drug_sensitivity_processing_parameters": train_dataset.drug_sensitivity_processing_parameters
+            }
+        )
+        model_name = params.get("model_fn", "trans_mca_dense_GEP_CNV")
+        model = MODEL_FACTORY[model_name](params).to(device)
+        model._associate_language(smiles_language)
+
+        # 不加载模型了
+        min_loss, min_rmse, max_pearson, max_r2 = 100, 1000, 0, 0
+
+        # Define optimizer
+        optimizer = OPTIMIZER_FACTORY[params.get("optimizer", "Adam")](
+            model.parameters(), lr=params.get("lr", 0.001)
         )
 
-        valloader = torch.utils.data.DataLoader(
-            train_dataset,
-            batch_size=params["batch_size"],
-            sampler=val_subsampler,
-            num_workers=params.get("num_workers", 4),
-            drop_last=True,
-            # shuffle=False
-        )
+        num_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+        params.update({"number_of_parameters": num_params})
+        print(f"Number of parameters {num_params}")
 
+        # Overwrite params.json file with updated parameters.
+        with open(os.path.join(model_dir, "model_params.json"), "w") as fp:
+            json.dump(params, fp)
+
+        # Start training
+        print("Training about to start...\n")
+        t = time()
         # start training
         for epoch in range(params["epochs"]):
 
             print(params_filepath.split("/")[-1])
             print(f"== Fold [{fold+1}/{params['fold']}] Epoch [{epoch}/{params['epochs']}] ==")
 
-            training(model, device, epoch, fold, trainloader, optimizer, params, t)
+            training(model, device, epoch, fold, train_loader, optimizer, params, t)
 
             t = time()
 
             test_pearson_a, test_rmse_a, test_loss_a, test_r2_a, predictions, labels = (
-                evaluation(model, device, valloader, params, epoch, fold, max_value, min_value))
-
-            # TODO: TEST数据集上性能观察
+                evaluation(model, device, test_loader, params, epoch, fold, max_value, min_value))
 
             def save(path, metric, typ, val=None):
                 fold_info = "Fold_" + (fold+1)
@@ -211,7 +198,7 @@ def main(
 
             def update_info():
                 return {
-                    "best_rmse": str(min_rmse),
+                    "best_rmse": str(float(min_rmse)),
                     "best_pearson": str(float(max_pearson)),
                     "test_loss": str(min_loss),
                     "best_r2": str(float(max_r2)),
@@ -222,30 +209,32 @@ def main(
                 min_rmse = test_rmse_a
                 min_loss = test_loss_a
                 min_loss_pearson = test_pearson_a
+                min_loss_r2 = test_r2_a
                 info = update_info()
                 save(save_top_model, "mse", "best", min_loss)
                 ep_loss = epoch
             if test_pearson_a > max_pearson:
                 max_pearson = test_pearson_a
                 max_pearson_loss = test_loss_a
+                max_pearson_r2 = test_r2_a
                 info = update_info()
                 save(save_top_model, "pearson", "best", max_pearson)
                 ep_pearson = epoch
             if test_r2_a > max_r2:
                 max_r2 = test_r2_a
+                max_r2_loss = test_loss_a
+                max_r2_pearson = test_pearson_a
                 info = update_info()
                 save(save_top_model, "r2", "best", max_r2)
                 ep_r2 = epoch
-            # 不按照轮次保存模型
-            # if (epoch + 1) % params.get("save_model", 100) == 0:
-            #     save(save_top_model, "epoch", str(epoch))
         print(
             f"Overall Fold {fold+1} best performances are: \n \t"
             f"Loss = {min_loss:.4f} in epoch {ep_loss} "
-            f"\t (Pearson was {min_loss_pearson:4f}) \n \t"
+            f"\t (Pearson was {min_loss_pearson:4f}; R2 was {min_loss_r2:4f}) \n \t"
             f"Pearson = {max_pearson:.4f} in epoch {ep_pearson} "
-            f"\t (Loss was {max_pearson_loss:2f})"
-            f"\t R2 = {max_r2:.4f} in epoch {ep_r2} "
+            f"\t (Loss was {max_pearson_loss:2f}; R2 was {max_pearson_r2:4f}) \n \t"
+            f"R2 = {max_r2:.4f} in epoch {ep_r2} "
+            f"\t (Loss was {max_r2_loss:4f}; Pearson was {max_r2_pearson:4f}) \n \t"
         )
         save(save_top_model, "training", "done")
 
@@ -254,7 +243,6 @@ def main(
 
 
 def training(model, device, epoch, fold, train_loader, optimizer, params, t):
-
     model.train()
     train_loss = 0
     for ind, (smiles, omic_1, omic_2, y) in enumerate(train_loader):
@@ -316,7 +304,7 @@ if __name__ == "__main__":
 
     # train_sensitivity_filepath = 'data/drug_sensitivity_MixedSet_test.csv'
     # test_sensitivity_filepath = 'data/drug_sensitivity_MixedSet_test.csv'
-    drug_sensitivity_filepath = 'data/drug_sensitivity.csv'
+    drug_sensitivity_filepath = 'data/k_fold_data/mixed/MixedSet_'
     omic1 = 'data/GeneExp_Wilcoxon_test_Analysis_Log10_P_value_C2_KEGG_MEDICUS.csv'
     omic2 = 'data/CNV_Cardinality_analysis_of_variance_Latest_MEDICUS.csv'
     omic3 = 'data/MUT_cardinality_analysis_of_variance_Only_MEDICUS.csv'
@@ -325,13 +313,12 @@ if __name__ == "__main__":
     smiles_language_filepath = 'data/smiles_language/tokenizer_customized'
     model_path = 'result/model'
     params_filepath = 'data/params/KFold_Test.json'
-    training_name = 'my_training_test'
+    training_name = 'train_MixedSet_10Fold_GEP_CNV'
     # run the training
     main(
         drug_sensitivity_filepath,
         omic1,
         omic2,
-        omic3,
         smi_filepath,
         gene_filepath,
         smiles_language_filepath,

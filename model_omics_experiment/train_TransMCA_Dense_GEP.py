@@ -258,29 +258,34 @@ def main(
             min_rmse = test_rmse_a
             min_loss = test_loss_a
             min_loss_pearson = test_pearson_a
+            min_loss_r2 = test_r2_a
             info = update_info()
             save(save_top_model, "mse", "best", min_loss)
             ep_loss = epoch
         if test_pearson_a > max_pearson:
             max_pearson = test_pearson_a
             max_pearson_loss = test_loss_a
+            max_pearson_r2 = test_r2_a
             info = update_info()
             save(save_top_model, "pearson", "best", max_pearson)
             ep_pearson = epoch
         if test_r2_a > max_r2:
             max_r2 = test_r2_a
+            max_r2_loss = test_loss_a
+            max_r2_pearson = test_pearson_a
             info = update_info()
             save(save_top_model, "r2", "best", max_r2)
             ep_r2 = epoch
-        if (epoch + 1) % params.get("save_model", 100) == 0:
-            save(save_top_model, "epoch", str(epoch))
+        # if (epoch + 1) % params.get("save_model", 100) == 0:
+        #     save(save_top_model, "epoch", str(epoch))
     print(
-        "Overall best performances are: \n \t"
+        f"Overall best performances are: \n \t"
         f"Loss = {min_loss:.4f} in epoch {ep_loss} "
-        f"\t (Pearson was {min_loss_pearson:4f}) \n \t"
+        f"\t (Pearson was {min_loss_pearson:4f}; R2 was {min_loss_r2:4f}) \n \t"
         f"Pearson = {max_pearson:.4f} in epoch {ep_pearson} "
-        f"\t (Loss was {max_pearson_loss:2f})"
-        f"\t R2 = {max_r2:.4f} in epoch {ep_r2} "
+        f"\t (Loss was {max_pearson_loss:2f}; R2 was {max_pearson_r2:4f}) \n \t"
+        f"R2 = {max_r2:.4f} in epoch {ep_r2} "
+        f"\t (Loss was {max_r2_loss:4f}; Pearson was {max_r2_pearson:4f}) \n \t"
     )
     save(save_top_model, "training", "done")
     print("Done with training, models saved, shutting down.")
