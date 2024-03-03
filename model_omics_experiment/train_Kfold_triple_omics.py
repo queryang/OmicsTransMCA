@@ -256,9 +256,9 @@ def main(
 def training(model, device, epoch, fold, train_loader, optimizer, params, t):
     model.train()
     train_loss = 0
-    for ind, (smiles, omic_1, omic_2, y) in enumerate(train_loader):
+    for ind, (smiles, omic_1, omic_2, omic_3, y) in enumerate(train_loader):
         y_hat, pred_dict = model(
-            torch.squeeze(smiles.to(device)), omic_1.to(device), omic_2.to(device))
+            torch.squeeze(smiles.to(device)), omic_1.to(device), omic_2.to(device), omic_3.to(device))
         loss = model.loss(y_hat, y.to(device))
         optimizer.zero_grad()
         loss.backward()
@@ -280,9 +280,9 @@ def evaluation(model, device, test_loader, params, epoch, fold, max_value, min_v
         test_loss = 0
         log_pres = []
         log_labels = []
-        for ind, (smiles, omic_1, omic_2, y) in enumerate(test_loader):
+        for ind, (smiles, omic_1, omic_2, omic_3, y) in enumerate(test_loader):
             y_hat, pred_dict = model(
-                torch.squeeze(smiles.to(device)), omic_1.to(device), omic_2.to(device)
+                torch.squeeze(smiles.to(device)), omic_1.to(device), omic_2.to(device), omic_3.to(device)
             )
             log_pre = pred_dict.get("log_micromolar_IC50")
             log_pres.append(log_pre)
