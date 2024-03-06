@@ -301,7 +301,7 @@ if __name__ == "__main__":
 
     # train_sensitivity_filepath = 'data/drug_sensitivity_MixedSet_test.csv'
     # test_sensitivity_filepath = 'data/drug_sensitivity_MixedSet_test.csv'
-    drug_sensitivity_filepath = 'data/k_fold_data/mixed/MixedSet_'
+    drug_sensitivity_filepath = 'data/k_fold_data/mixed/10fold/MixedSet_'
     omic1 = 'data/GeneExp_Wilcoxon_test_Analysis_Log10_P_value_C2_KEGG_MEDICUS.csv'
     omic2 = 'data/CNV_Cardinality_analysis_of_variance_Latest_MEDICUS.csv'
     omic3 = 'data/MUT_cardinality_analysis_of_variance_Only_MEDICUS.csv'

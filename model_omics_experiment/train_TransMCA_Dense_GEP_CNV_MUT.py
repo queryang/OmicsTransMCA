@@ -32,6 +32,18 @@ def main(
     params = {}
     with open(params_filepath) as fp:
         params.update(json.load(fp))
+        params.update(
+            {
+                "batch_size": 421,
+                "epochs": 200,
+                "num_workers": 4,
+                "stacked_dense_hidden_sizes": [
+                    1536,
+                    512,
+                    128
+                ],
+            }
+        )
     print(params)
     # Create model directory and dump files
     model_dir = os.path.join(model_path, training_name)
@@ -192,7 +204,7 @@ def main(
             optimizer.zero_grad()
             loss.backward()
             # Apply gradient clipping
-            torch.nn.utils.clip_grad_norm_(model.parameters(), 1e-6)
+            torch.nn.utils.clip_grad_norm_(model.parameters(), 2e-6)
             optimizer.step()
             train_loss += loss.item()
 
@@ -308,7 +320,7 @@ if __name__ == "__main__":
     smiles_language_filepath = 'data/smiles_language/tokenizer_customized'
     model_path = 'result/model'
     params_filepath = 'data/params/TransMCA_Dense_GEP_CNV_MUT.json'
-    training_name = 'TRANS_MCA_GEP_CNV_MUT_MEDICUS619_1536_Clipping'
+    training_name = 'TRANS_MCA_GEP_CNV_MUT_MEDICUS619_1536_Clipping_LUNG_CellBlind'
     # run the training
     main(
         train_sensitivity_filepath,
