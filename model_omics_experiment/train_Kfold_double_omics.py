@@ -305,7 +305,7 @@ if __name__ == "__main__":
 
     # train_sensitivity_filepath = 'data/drug_sensitivity_MixedSet_test.csv'
     # test_sensitivity_filepath = 'data/drug_sensitivity_MixedSet_test.csv'
-    drug_sensitivity_filepath = 'data/k_fold_data/mixed/10fold/MixedSet_'
+    drug_sensitivity_filepath = 'data/k_fold_data/mixed/11fold/MixedSet_'
     omic1 = 'data/GeneExp_Wilcoxon_test_Analysis_Log10_P_value_C2_KEGG_MEDICUS.csv'
     omic2 = 'data/CNV_Cardinality_analysis_of_variance_Latest_MEDICUS.csv'
     omic3 = 'data/MUT_cardinality_analysis_of_variance_Only_MEDICUS.csv'
@@ -314,12 +314,12 @@ if __name__ == "__main__":
     smiles_language_filepath = 'data/smiles_language/tokenizer_customized'
     model_path = 'result/model'
     params_filepath = 'data/params/KFold_Test.json'
-    training_name = 'train_MixedSet_11Fold_GEP_CNV'
+    training_name = 'train_MixedSet_11Fold_GEP_MUT'
     # run the training
     main(
         drug_sensitivity_filepath,
         omic1,
-        omic2,
+        omic3,
         smi_filepath,
         gene_filepath,
         smiles_language_filepath,

@@ -33,8 +33,8 @@ def main(
         params.update(json.load(fp))
         params.update(
             {
-                "batch_size": 657,
-                "epochs": 100,
+                "batch_size": 568,
+                "epochs": 200,
                 "num_workers": 4,
             }
         )
@@ -180,7 +180,7 @@ def main(
 
         model.train()
         print(params_filepath.split("/")[-1])
-        print(f"== Epoch [{epoch}/{params['epochs']}] ==")
+        print(f"== Epoch [{epoch+1}/{params['epochs']}] ==")
         train_loss = 0
 
         for ind, (smiles, gep, y) in enumerate(train_loader):
@@ -233,9 +233,9 @@ def main(
         print(
             f"\t **** TESTING ****   Epoch [{epoch + 1}/{params['epochs']}], "
             f"loss: {test_loss_a:.5f}, "
-            f"Pearson: {test_pearson_a:.3f}, "
-            f"RMSE: {test_rmse_a:.3f}, "
-            f"R2: {test_r2_a:.3f}. "
+            f"Pearson: {test_pearson_a:.5f}, "
+            f"RMSE: {test_rmse_a:.5f}, "
+            f"R2: {test_r2_a:.5f}. "
         )
 
         def save(path, metric, typ, val=None):
@@ -300,8 +300,8 @@ def main(
 
 if __name__ == "__main__":
 
-    train_sensitivity_filepath = 'data/drug_sensitivity_MixedSet_Erlotinib_train.csv'
-    test_sensitivity_filepath = 'data/drug_sensitivity_MixedSet_Erlotinib_test.csv'
+    train_sensitivity_filepath = 'data/drug_sensitivity_MixedSet_EGFR_train.csv'
+    test_sensitivity_filepath = 'data/drug_sensitivity_MixedSet_EGFR_test.csv'
     gep_filepath = 'data/GeneExp_Wilcoxon_test_Analysis_Log10_P_value_C2_KEGG_MEDICUS.csv'
     cnv_filepath = 'data/CNV_Cardinality_analysis_of_variance_Latest_MEDICUS.csv'
     mut_filepath = 'data/MUT_cardinality_analysis_of_variance_Only_MEDICUS.csv'
@@ -310,7 +310,7 @@ if __name__ == "__main__":
     smiles_language_filepath = 'data/smiles_language/tokenizer_customized'
     model_path = 'result/model'
     params_filepath = 'data/params/TransMCA_Dense_GEP.json'
-    training_name = 'TRANS_MCA_GEP_MIXEDSET_Erlotinib'
+    training_name = 'TRANS_MCA_GEP_MIXEDSET_EGFR'
     # run the training
     main(
         train_sensitivity_filepath,
