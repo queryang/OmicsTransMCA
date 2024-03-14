@@ -183,7 +183,7 @@ def main(
 
 if __name__ == "__main__":
 
-    test_sensitivity_filepath = '../model_omics_experiment/data/drug_sensitivity_MixedSet_test.csv'
+    test_sensitivity_filepath = '../data/drug_sensitivity_MixedSet_test.csv'
     gep_filepath = '../model_omics_experiment/data/GeneExp_Wilcoxon_test_Analysis_Log10_P_value_C2_KEGG_MEDICUS.csv'
     cnv_filepath = '../model_omics_experiment/data/CNV_Cardinality_analysis_of_variance_Latest_MEDICUS.csv'
     mut_filepath = '../model_omics_experiment/data/MUT_cardinality_analysis_of_variance_Only_MEDICUS.csv'

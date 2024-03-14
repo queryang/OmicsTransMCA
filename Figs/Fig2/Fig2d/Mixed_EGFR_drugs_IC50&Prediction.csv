@@ -1,3 +1,5 @@
 drug,cell_line,IC50,prediction,OncotreeCode
 Erlotinib,HCC827,-2.707414,-0.576975,LUAD
 Erlotinib,PC14,-2.165833,-1.300865,LUAD
+Erlotinib,NCIH2228,3.922372777,3.404778,LUAD
+Erlotinib,EKVX,1.720419445,2.329803,LUAD

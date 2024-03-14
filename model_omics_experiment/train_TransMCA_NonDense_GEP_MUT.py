@@ -297,8 +297,8 @@ def main(
 
 if __name__ == "__main__":
 
-    train_sensitivity_filepath = 'data/drug_sensitivity_MixedSet_train.csv'
-    test_sensitivity_filepath = 'data/drug_sensitivity_MixedSet_test.csv'
+    train_sensitivity_filepath = '../data/drug_sensitivity_MixedSet_train.csv'
+    test_sensitivity_filepath = '../data/drug_sensitivity_MixedSet_test.csv'
     gep_filepath = 'data/OmicsExpressionProteinCodingGenesTPMLogp1-23Q2_Only_MEDICUS_GSVA.csv'
     mut_filepath = 'data/MUT_cardinality_analysis_of_variance_Only_MEDICUS.csv'
     smi_filepath = 'data/ccle-gdsc.smi'

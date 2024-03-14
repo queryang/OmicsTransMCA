@@ -3,7 +3,7 @@ library(caret)
 library(ggpubr)
 setwd('D:\\WuYang\\code space\\python\\paper code\\OmicsTransMCA\\Figs\\Fig1')
 ## 读取csv文件
-pre_labels= read.csv("result/rf_Erlotinib.csv", sep=",", header=T, stringsAsFactors = F)
+pre_labels= read.csv("result/TransMCADense_GEP_DrugBlind_predictions&labels.csv", sep=",", header=T, stringsAsFactors = F)
 #取第一列为predictions，第二列为labels
 predictions=pre_labels[,1]
 labels=pre_labels[,2]

@@ -33,7 +33,7 @@ def main(
         params.update(json.load(fp))
         params.update(
             {
-                "batch_size": 568,
+                "batch_size": 697,
                 "epochs": 200,
                 "num_workers": 4,
             }
@@ -300,8 +300,8 @@ def main(
 
 if __name__ == "__main__":
 
-    train_sensitivity_filepath = 'data/drug_sensitivity_MixedSet_EGFR_train.csv'
-    test_sensitivity_filepath = 'data/drug_sensitivity_MixedSet_EGFR_test.csv'
+    train_sensitivity_filepath = 'data/drug_sensitivity_DrugBlind_train.csv'
+    test_sensitivity_filepath = 'data/drug_sensitivity_DrugBlind_test.csv'
     gep_filepath = 'data/GeneExp_Wilcoxon_test_Analysis_Log10_P_value_C2_KEGG_MEDICUS.csv'
     cnv_filepath = 'data/CNV_Cardinality_analysis_of_variance_Latest_MEDICUS.csv'
     mut_filepath = 'data/MUT_cardinality_analysis_of_variance_Only_MEDICUS.csv'
@@ -310,7 +310,7 @@ if __name__ == "__main__":
     smiles_language_filepath = 'data/smiles_language/tokenizer_customized'
     model_path = 'result/model'
     params_filepath = 'data/params/TransMCA_Dense_GEP.json'
-    training_name = 'TRANS_MCA_GEP_MIXEDSET_EGFR'
+    training_name = 'TRANS_MCA_GEP_DRUG_BLIND'
     # run the training
     main(
         train_sensitivity_filepath,
