@@ -35,7 +35,7 @@ def main(
             {
                 "batch_size": 697,
                 "epochs": 200,
-                "num_workers": 4,
+                "num_workers": 0,
             }
         )
     print(params)
@@ -300,7 +300,7 @@ def main(
 
 if __name__ == "__main__":
 
-    train_sensitivity_filepath = 'data/drug_sensitivity_DrugBlind_train.csv'
+    train_sensitivity_filepath = 'data/drug_sensitivity_DrugBlind_test.csv'
     test_sensitivity_filepath = 'data/drug_sensitivity_DrugBlind_test.csv'
     gep_filepath = 'data/GeneExp_Wilcoxon_test_Analysis_Log10_P_value_C2_KEGG_MEDICUS.csv'
     cnv_filepath = 'data/CNV_Cardinality_analysis_of_variance_Latest_MEDICUS.csv'

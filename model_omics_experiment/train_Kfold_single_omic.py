@@ -310,7 +310,7 @@ if __name__ == "__main__":
     smiles_language_filepath = 'data/smiles_language/tokenizer_customized'
     model_path = 'result/model'
     params_filepath = 'data/params/KFold_Test.json'
-    training_name = 'train_MixedSet_11Fold_GEP'
+    training_name = 'train_MixedSet_10Fold_CNV'
     # run the training
     main(
         drug_sensitivity_filepath,

@@ -103,8 +103,8 @@ def main(
     print(
         f'model is {device}'
     )
-
-    model_name = params.get("model_fn", "trans_mca_dense_GEP")
+    # trans_mca_dense_GEP_V2
+    model_name = params.get("model_fn", "trans_mca_dense_GEP_V2")
     model = MODEL_FACTORY[model_name](params).to(device)
     model._associate_language(smiles_language)
 
@@ -182,8 +182,8 @@ def main(
     gene_attentions = pd.DataFrame(gene_attentions)
     smiles_attentions_geps = pd.DataFrame(smiles_attentions_geps)
 
-    gene_attentions.to_csv('attention_result/TransMCA_Pathway_Attention_MixedSet_GEP.csv',index=False)
-    smiles_attentions_geps.to_csv('attention_result/TransMCA_Smiles_Attention_MixedSet_GEP.csv',index=False)
+    gene_attentions.to_csv('attention_result/TransMCA_Pathway_Attention_MixedSet_GEP_V2.csv',index=False)
+    smiles_attentions_geps.to_csv('attention_result/TransMCA_Smiles_Attention_MixedSet_GEP_V2.csv',index=False)
 
 if __name__ == "__main__":
 
@@ -194,8 +194,8 @@ if __name__ == "__main__":
     smi_filepath = '../model_omics_experiment/data/ccle-gdsc.smi'
     gene_filepath = '../model_omics_experiment/data/MUDICUS_Omic_619_pathways.pkl'
     smiles_language_filepath = '../model_omics_experiment/data/smiles_language/tokenizer_customized'
-    model_path = 'models/TRANS_MCA_GEP_MIXEDSET_Erlotinib/weights/best_mse_trans_mca_dense_GEP.pt'
-    params_filepath = 'models/TRANS_MCA_GEP_MIXEDSET_Erlotinib/model_params.json'
+    model_path = 'models/TRANS_MCA_GEP_V2_MixedSet_Erlotinib/weights/best_mse_trans_mca_dense_GEP_V2.pt'
+    params_filepath = 'models/TRANS_MCA_GEP_V2_MixedSet_Erlotinib/model_params.json'
     # training_name = 'TRANS_MCA_GEP(Log10_P_value)_CNV(Cardinality_Analysis)_MUT_MEDICUS619'
     # run the training
     main(

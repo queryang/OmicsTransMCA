@@ -33,6 +33,13 @@ def main(
     params = {}
     with open(params_filepath) as fp:
         params.update(json.load(fp))
+        params.update(
+            {
+                "batch_size": 227,
+                "epochs": 200,
+                "num_workers": 4,
+            }
+        )
     print(params)
     # Create model directory and dump files
     model_dir = os.path.join(model_path, training_name)
@@ -189,7 +196,7 @@ def main(
             optimizer.zero_grad()
             loss.backward()
             # Apply gradient clipping
-            # torch.nn.utils.clip_grad_norm_(model.parameters(),1e-6)
+            torch.nn.utils.clip_grad_norm_(model.parameters(),2e-6)
             optimizer.step()
             train_loss += loss.item()
 
@@ -295,8 +302,8 @@ def main(
 
 if __name__ == "__main__":
 
-    train_sensitivity_filepath = '../data/drug_sensitivity_MixedSet_train.csv'
-    test_sensitivity_filepath = '../data/drug_sensitivity_MixedSet_test.csv'
+    train_sensitivity_filepath = 'data/drug_sensitivity_MixedSet_Erlotinib_train.csv'
+    test_sensitivity_filepath = 'data/drug_sensitivity_MixedSet_Erlotinib_test.csv'
     gep_filepath = 'data/GeneExp_Wilcoxon_test_Analysis_Log10_P_value_C2_KEGG_MEDICUS.csv'
     cnv_filepath = 'data/CNV_Cardinality_analysis_of_variance_Latest_MEDICUS.csv'
     smi_filepath = 'data/ccle-gdsc.smi'
@@ -304,7 +311,7 @@ if __name__ == "__main__":
     smiles_language_filepath = 'data/smiles_language/tokenizer_customized'
     model_path = 'result/model'
     params_filepath = 'data/params/TransMCA_Dense_GEP_CNV.json'
-    training_name = 'TRANS_MCA_GEP(Log10_P_value)_CNV(Cardinality_Analysis)_MEDICUS619'
+    training_name = 'TRANS_MCA_GEP_CNV_MIXEDSET_Erlotinib_2e6'
     # run the training
     main(
         train_sensitivity_filepath,

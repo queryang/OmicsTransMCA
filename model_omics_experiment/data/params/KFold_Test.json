@@ -5,7 +5,7 @@
     "number_of_genes": 619,
     "smiles_padding_length": 256,
     "stacked_dense_hidden_sizes": [
-        1024,
+        1280,
         512,
         128
     ],
@@ -91,6 +91,6 @@
     "n_heads": 2,
     "num_layers": 4,
     "omics_dense_size": 64,
-    "fold": 11,
+    "fold": 10,
     "dataset_device": "cpu"
 }
